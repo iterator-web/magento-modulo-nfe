@@ -47,6 +47,11 @@
             <nfe>
                 <class>Iterator_Nfe_Block</class>
             </nfe>
+            <adminhtml>
+                <rewrite>
+                    <sales_order_grid>Iterator_Nfe_Block_Adminhtml_Order_Grid</sales_order_grid>
+                </rewrite>
+            </adminhtml>
         </blocks>
         <resources>
             <nfe_setup>
