@@ -50,6 +50,7 @@
             <adminhtml>
                 <rewrite>
                     <sales_order_grid>Iterator_Nfe_Block_Adminhtml_Order_Grid</sales_order_grid>
+                    <sales_order_view>Iterator_Nfe_Block_Adminhtml_Order_View</sales_order_view>
                 </rewrite>
             </adminhtml>
         </blocks>
