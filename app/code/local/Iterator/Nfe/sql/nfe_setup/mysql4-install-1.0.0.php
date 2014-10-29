@@ -50,7 +50,13 @@ $installer->run("
   ");
   
 $status = Mage::getModel('sales/order_status');
-$status->setStatus('nfe_aguardando')->setLabel(utf8_encode('Aguardando Autorização NF-e'))
+$status->setStatus('nfe_aguardando')->setLabel('NF-e Aguardando')
+    ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
+    ->save();
+$status->setStatus('nfe_enviada')->setLabel('NF-e Enviada')
+    ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
+    ->save();
+$status->setStatus('nfe_cancelada')->setLabel('NF-e Cancelada')
     ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
     ->save();
 
