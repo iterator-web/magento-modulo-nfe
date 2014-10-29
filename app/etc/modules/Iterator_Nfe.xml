@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <modules>
+        <Iterator_Nfe>
+            <active>true</active>
+            <codePool>local</codePool>
+        </Iterator_Nfe>
+    </modules>
+</config>

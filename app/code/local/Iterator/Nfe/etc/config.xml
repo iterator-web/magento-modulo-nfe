@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <Iterator_Nfe>
+            <version>1.0.0</version>
+        </Iterator_Nfe>
+    </modules>
+    
+    <admin>
+        <routers>
+            <adminhtml>
+                <args>
+                    <modules>
+                        <Iterator_Nfe before="Mage_Adminhtml">Iterator_Nfe_Adminhtml</Iterator_Nfe>
+                    </modules>
+                </args>
+            </adminhtml>
+        </routers>
+    </admin>
+
+    <adminhtml>
+        <layout>
+            <updates>
+                <nfe module="Iterator_Nfe">
+                    <file>iterator_nfe.xml</file>
+                </nfe>
+            </updates>
+        </layout>
+    </adminhtml>
+    
+    <global>
+        <models>
+            <nfe>
+                <class>Iterator_Nfe_Model</class>
+                <resourceModel>nfe_mysql4</resourceModel>
+            </nfe>
+            <nfe_mysql4>
+                <class>Iterator_Nfe_Model_Mysql4</class>
+                <entities>
+                    <nfe>
+                        <table>iterator_nfe</table>
+                    </nfe>
+                </entities>
+            </nfe_mysql4>
+        </models>
+        <blocks>
+            <nfe>
+                <class>Iterator_Nfe_Block</class>
+            </nfe>
+        </blocks>
+        <resources>
+            <nfe_setup>
+                <setup>
+                    <module>Iterator_Nfe</module>
+                </setup>
+                <connection>
+                    <use>core_setup</use>
+                </connection>
+            </nfe_setup>
+            <nfe_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </nfe_write>
+            <nfe_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </nfe_read>
+        </resources>
+        <helpers>
+            <nfe>
+                <class>Iterator_Nfe_Helper</class>
+            </nfe>
+        </helpers>
+    </global>  
+    
+    <crontab>
+        <jobs>
+            <processa_nfe>
+                <schedule>
+                    <cron_expr>*/10 * * * *</cron_expr>
+                </schedule>
+                <run>
+                    <model>nfe/observer::processaNfe</model>
+                </run>
+            </processa_nfe>
+        </jobs>
+    </crontab>
+    
+</config>
