@@ -44,6 +44,34 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             }
         }
     }
+    
+    public function massGerarNfeAction(){
+        $orderIds = $this->getRequest()->getPost('order_ids', array());
+        $countNfeOrder = 0;
+        $countNonNfeOrder = 0;
+        foreach ($orderIds as $orderId) {
+            $order = Mage::getModel('sales/order')->load($orderId);
+            if ($order->getStatus() == 'processing' || $order->getStatus() == 'nfe_cancelada') {
+                
+                // TODO: Iniciar neste ponto a invocação do método responsável por gerar a NF-e para os pedidos solicitados
+                
+                $countNfeOrder++;
+            } else {
+                $countNonNfeOrder++;
+            }
+        }
+        if ($countNonNfeOrder) {
+            if ($countNfeOrder) {
+                $this->_getSession()->addError($this->__('%s pedido(s) com NF-e n&atilde;o gerada(s).', $countNonNfeOrder));
+            } else {
+                $this->_getSession()->addError($this->__('Pedido(s) com NF-e n&atilde;o gerada(s).'));
+            }
+        }
+        if ($countNfeOrder) {
+            $this->_getSession()->addSuccess($this->__('%s pedido(s) com NF-e gerada(s) com sucesso.', $countNfeOrder));
+        }
+        $this->_redirect('*/sales_order/');
+    }
 }
 
 ?>
