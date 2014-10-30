@@ -88,7 +88,7 @@
                     <cron_expr>*/10 * * * *</cron_expr>
                 </schedule>
                 <run>
-                    <model>nfe/observer::processaNfe</model>
+                    <model>nfe/observer::gerarNfe</model>
                 </run>
             </processa_nfe>
         </jobs>
