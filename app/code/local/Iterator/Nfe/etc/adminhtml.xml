@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <translate>
+        <modules>
+            <Iterator_Nfe>
+                <files>
+                    <default>Iterator_Nfe.csv</default>
+                </files>
+            </Iterator_Nfe>
+        </modules>
+    </translate>
+    
+    <acl>
+        <resources>
+            <all>
+                <title>Allow Everything</title>
+            </all>
+            <admin>
+                <children>                 
+                    <system>
+                        <children>
+                            <config>
+                                <children>
+                                    <nfe>
+                                        <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                                    </nfe>
+                                </children>
+                            </config>
+                        </children>
+                    </system>
+                </children>
+            </admin>
+        </resources>
+    </acl>
+    <layout>
+        <updates>
+            <nfe module="Iterator_Nfe">
+                <file>iterator_nfe.xml</file>
+            </nfe>
+        </updates>
+    </layout>
+</config>
