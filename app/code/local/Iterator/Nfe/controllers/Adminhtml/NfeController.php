@@ -45,6 +45,26 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
     }
     
+    public function gerarNfeAction() {
+        $orderId = $this->getRequest()->getParam('order_id');
+        if ($orderId) {
+            try {
+                
+                // TODO: Iniciar neste ponto a invocação do método responsável por gerar a NF-e para o pedido solicitado
+                
+                $this->_getSession()->addSuccess($this->__('Pedido com NF-e gerada com sucesso.'));
+            }
+            catch (Mage_Core_Exception $e) {
+                $this->_getSession()->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                $this->_getSession()->addError($this->__('Pedido com NF-e n&atilde;o gerada.'));
+                Mage::logException($e);
+            }
+            $this->_redirect('*/sales_order/view', array('order_id' => $orderId));
+        }
+    }
+    
     public function massGerarNfeAction(){
         $orderIds = $this->getRequest()->getPost('order_ids', array());
         $countNfeOrder = 0;
