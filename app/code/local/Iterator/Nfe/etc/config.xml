@@ -40,6 +40,27 @@
                     <nfe>
                         <table>iterator_nfe</table>
                     </nfe>
+                    <nferange>
+                        <table>iterator_nfe_range</table>
+                    </nferange>
+                    <nfereferenciado>
+                        <table>iterator_nfe_referenciado</table>
+                    </nfereferenciado>
+                    <nfeidentificacao>
+                        <table>iterator_nfe_identificacao</table>
+                    </nfeidentificacao>
+                    <nfeproduto>
+                        <table>iterator_nfe_produto</table>
+                    </nfeproduto>
+                    <nfeprodutoimportexport>
+                        <table>iterator_nfe_produto_importexport</table>
+                    </nfeprodutoimportexport>
+                    <nfeprodutoespecifico>
+                        <table>iterator_nfe_produto_especifico</table>
+                    </nfeprodutoespecifico>
+                    <nfeprodutoimposto>
+                        <table>iterator_nfe_produto_imposto</table>
+                    </nfeprodutoimposto>
                 </entities>
             </nfe_mysql4>
         </models>
