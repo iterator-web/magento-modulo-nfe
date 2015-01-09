@@ -431,8 +431,8 @@ $installer->run("
   ENGINE = InnoDB CHARSET=utf8;
   
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nferange')}` (
-    `numero` INT(9) UNSIGNED NOT NULL,
-    `serie` INT(3) UNSIGNED NULL,
+    `numero` INT(9) UNSIGNED ZEROFILL NOT NULL,
+    `serie` INT(3) UNSIGNED ZEROFILL NULL DEFAULT NULL,
     `valor_inicio` TINYINT(1) UNSIGNED NULL,
     PRIMARY KEY (`numero`))
   ENGINE = InnoDB DEFAULT CHARSET=utf8;
