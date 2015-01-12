@@ -43,7 +43,7 @@ $installer->run("
     `status` TINYINT(1) UNSIGNED NULL,
     `mensagem` VARCHAR(255) NULL,
     `versao` VARCHAR(4) NULL,
-    `id` VARCHAR(47) NULL,
+    `id_tag` VARCHAR(47) NULL,
     `c_uf` TINYINT(2) UNSIGNED NULL,
     `c_nf` INT(8) UNSIGNED NULL,
     `nat_op` VARCHAR(60) NULL,
