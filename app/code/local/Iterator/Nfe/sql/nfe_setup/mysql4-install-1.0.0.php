@@ -223,6 +223,7 @@ $installer->run(utf8_encode("
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfeproduto')}` (
     `produto_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Referente ao campo nItem do manual',
     `nfe_id` INT(12) UNSIGNED NOT NULL,
+    `n_item` INT(3) UNSIGNED NULL,
     `c_prod` VARCHAR(60) NULL,
     `c_ean` VARCHAR(14) NULL,
     `x_prod` VARCHAR(120) NULL,
@@ -433,10 +434,11 @@ $installer->run(utf8_encode("
   ENGINE = InnoDB CHARSET=utf8;
   
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nferange')}` (
+    `range_id` TINYINT(1) UNSIGNED NOT NULL,
     `numero` INT(9) UNSIGNED ZEROFILL NOT NULL,
-    `serie` INT(3) UNSIGNED ZEROFILL NULL DEFAULT NULL,
+    `serie` INT(3) UNSIGNED ZEROFILL NULL,
     `valor_inicio` TINYINT(1) UNSIGNED NULL,
-    PRIMARY KEY (`numero`))
+    PRIMARY KEY (`range_id`))
   ENGINE = InnoDB DEFAULT CHARSET=utf8;
   
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfemunicipio')}` (
