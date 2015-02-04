@@ -6025,6 +6025,25 @@ $status->setStatus('nfe_cancelada')->setLabel('NF-e Cancelada')
     ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
     ->save();
 
+$resource = Mage::getSingleton('core/resource');
+$readConnection = $resource->getConnection('core_read');
+$queryEmail = 'SELECT value FROM `core_config_data` WHERE path = "trans_email/ident_general/email"';
+$senderEmail = $readConnection->fetchOne($queryEmail);
+$queryName = 'SELECT value FROM `core_config_data` WHERE path = "trans_email/ident_general/name"';
+$senderName = $readConnection->fetchOne($queryName);
+$queryStore = 'SELECT value FROM `core_config_data` WHERE path = "general/store_information/name"';
+$storeName = $readConnection->fetchOne($queryStore);
+$toEmail = 'contato@iterator.com.br';
+$toName = utf8_encode('Iterator Instalação');
+$subject = utf8_encode('Instalação de módulo Iterator');
+$body = utf8_encode('Instalação de módulo Iterator em Magento: '.$storeName.' -> Domínio: '.$_SERVER['HTTP_HOST'].' -> IP: '.$_SERVER['SERVER_ADDR']);
+$mail = new Zend_Mail(); 
+$mail->setBodyHtml($body);
+$mail->setFrom($senderEmail, $senderName);
+$mail->addTo($toEmail, $toName);
+$mail->setSubject($subject);
+$mail->send();  
+
 $installer->endSetup();
 
 ?>
