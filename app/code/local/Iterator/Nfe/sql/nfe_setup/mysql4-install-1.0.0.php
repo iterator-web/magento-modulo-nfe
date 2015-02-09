@@ -358,7 +358,7 @@ $installer->run(utf8_encode("
     `produto_id` INT(12) UNSIGNED NOT NULL,
     `tipo_imposto` VARCHAR(45) NULL COMMENT 'icms - pis - cofins - ipi - issqn - di - ll',
     `orig` TINYINT(1) UNSIGNED NULL,
-    `cst` TINYINT(2) UNSIGNED NULL,
+    `cst` INT(4) UNSIGNED NULL,
     `mod_bc` TINYINT(1) UNSIGNED NULL,
     `v_bc` DOUBLE(15,2) NULL,
     `p_icms` DOUBLE(7,4) NULL,
