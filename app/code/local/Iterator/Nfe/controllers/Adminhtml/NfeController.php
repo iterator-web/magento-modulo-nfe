@@ -49,10 +49,14 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $orderId = $this->getRequest()->getParam('order_id');
         if ($orderId) {
             try {
-                
-                // TODO: Iniciar neste ponto a invocação do método responsável por gerar a NF-e para o pedido solicitado
-                
-                $this->_getSession()->addSuccess($this->__('Pedido com NF-e gerada com sucesso.'));
+                $order = Mage::getModel('sales/order')->load($orderId);
+                $nfeRN = Mage::getModel('nfe/nfeRN');
+                $retorno = $nfeRN->montarNfe($order);
+                if($retorno['status'] == 'sucesso') {
+                    $this->_getSession()->addSuccess($this->__($retorno['msg']));
+                } else if($retorno['status'] == 'erro') {
+                    $this->_getSession()->addError($this->__($retorno['msg']));
+                }
             }
             catch (Mage_Core_Exception $e) {
                 $this->_getSession()->addError($e->getMessage());
