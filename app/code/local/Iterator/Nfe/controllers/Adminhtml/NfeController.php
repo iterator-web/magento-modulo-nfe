@@ -76,23 +76,27 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         foreach ($orderIds as $orderId) {
             $order = Mage::getModel('sales/order')->load($orderId);
             if ($order->getStatus() == 'processing' || $order->getStatus() == 'nfe_cancelada') {
-                
-                // TODO: Iniciar neste ponto a invocação do método responsável por gerar a NF-e para os pedidos solicitados
-                
-                $countNfeOrder++;
+                $nfeRN = Mage::getModel('nfe/nfeRN');
+                $retorno = $nfeRN->montarNfe($order);
+                if($retorno['status'] == 'sucesso') {
+                    $countNfeOrder++;
+                } else if($retorno['status'] == 'erro') {
+                    $this->_getSession()->addError($this->__($retorno['msg']));
+                    $countNonNfeOrder++;
+                }
             } else {
                 $countNonNfeOrder++;
             }
         }
         if ($countNonNfeOrder) {
             if ($countNfeOrder) {
-                $this->_getSession()->addError($this->__('%s pedido(s) com NF-e n&atilde;o gerada(s).', $countNonNfeOrder));
+                $this->_getSession()->addError($this->__('%s solicita&ccedil;&otilde;es de pedido(s) para emiss&atilde;o de NF-e n&atilde;o gerada(s).', $countNonNfeOrder));
             } else {
-                $this->_getSession()->addError($this->__('Pedido(s) com NF-e n&atilde;o gerada(s).'));
+                $this->_getSession()->addError($this->__('Solicita&ccedil;&otilde;es de pedido(s) para emiss&atilde;o de NF-e n&atilde;o gerada(s).'));
             }
         }
         if ($countNfeOrder) {
-            $this->_getSession()->addSuccess($this->__('%s pedido(s) com NF-e gerada(s) com sucesso.', $countNfeOrder));
+            $this->_getSession()->addSuccess($this->__('%s solicita&ccedil;&otilde;es de pedido(s) para emiss&atilde;o de NF-e gerada(s) com sucesso.', $countNfeOrder));
         }
         $this->_redirect('*/sales_order/');
     }
