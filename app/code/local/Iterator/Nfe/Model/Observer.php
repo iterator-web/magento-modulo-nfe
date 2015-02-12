@@ -38,9 +38,8 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
         $orderCollection = Mage::getResourceModel('sales/order_collection');
         $orderCollection->addFieldToFilter('status', array('in' => array('processing', 'nfe_cancelada')));
         foreach ($orderCollection as $order){
-            
-            // TODO: Iniciar neste ponto a invocação do método responsável por gerar a NF-e para os pedidos solicitados
-            
+            $nfeRN = Mage::getModel('nfe/nfeRN');
+            $nfeRN->montarNfe($order);
         }
     }
 }
