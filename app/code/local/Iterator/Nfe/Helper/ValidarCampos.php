@@ -1,0 +1,194 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
+    
+    public function validarCnpj($cnpj) {
+        if (strlen($cnpj) <> 14) {
+            return false; 
+        }
+        $soma = 0;
+
+        $soma += ($cnpj[0] * 5);
+        $soma += ($cnpj[1] * 4);
+        $soma += ($cnpj[2] * 3);
+        $soma += ($cnpj[3] * 2);
+        $soma += ($cnpj[4] * 9); 
+        $soma += ($cnpj[5] * 8);
+        $soma += ($cnpj[6] * 7);
+        $soma += ($cnpj[7] * 6);
+        $soma += ($cnpj[8] * 5);
+        $soma += ($cnpj[9] * 4);
+        $soma += ($cnpj[10] * 3);
+        $soma += ($cnpj[11] * 2); 
+
+        $d1 = $soma % 11; 
+        $d1 = $d1 < 2 ? 0 : 11 - $d1; 
+
+        $soma = 0;
+        $soma += ($cnpj[0] * 6); 
+        $soma += ($cnpj[1] * 5);
+        $soma += ($cnpj[2] * 4);
+        $soma += ($cnpj[3] * 3);
+        $soma += ($cnpj[4] * 2);
+        $soma += ($cnpj[5] * 9);
+        $soma += ($cnpj[6] * 8);
+        $soma += ($cnpj[7] * 7);
+        $soma += ($cnpj[8] * 6);
+        $soma += ($cnpj[9] * 5);
+        $soma += ($cnpj[10] * 4);
+        $soma += ($cnpj[11] * 3);
+        $soma += ($cnpj[12] * 2); 
+
+        $d2 = $soma % 11; 
+        $d2 = $d2 < 2 ? 0 : 11 - $d2; 
+
+        if ($cnpj[12] == $d1 && $cnpj[13] == $d2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
+    function validarCpf($cpf) {
+        $cpf = str_pad(ereg_replace('[^0-9]', '', $cpf), 11, '0', STR_PAD_LEFT);
+        if (strlen($cpf) != 11 || $cpf == '00000000000' || $cpf == '11111111111' || $cpf == '22222222222' || $cpf == '33333333333' || $cpf == '44444444444' || $cpf == '55555555555' || $cpf == '66666666666' || $cpf == '77777777777' || $cpf == '88888888888' || $cpf == '99999999999') {
+            return false;
+        } else {
+            for ($t = 9; $t < 11; $t++) {
+                for ($d = 0, $c = 0; $c < $t; $c++) {
+                    $d += $cpf{$c} * (($t + 1) - $c);
+                }
+
+                $d = ((10 * $d) % 11) % 10;
+
+                if ($cpf{$c} != $d) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+    
+    public function getUfEquivalente($ufMagento) {
+        $ufIbge = null;
+        switch ($ufMagento) {
+            case '485':
+                $ufIbge = '12';
+                break;
+            case '486':
+                $ufIbge = '27';
+                break;
+            case '487':
+                $ufIbge = '16';
+                break;
+            case '488':
+                $ufIbge = '13';
+                break;
+            case '489':
+                $ufIbge = '29';
+                break;
+            case '490':
+                $ufIbge = '23';
+                break;
+            case '491':
+                $ufIbge = '53';
+                break;
+            case '492':
+                $ufIbge = '32';
+                break;
+            case '493':
+                $ufIbge = '52';
+                break;
+            case '494':
+                $ufIbge = '21';
+                break;
+            case '495':
+                $ufIbge = '51';
+                break;
+            case '496':
+                $ufIbge = '50';
+                break;
+            case '497':
+                $ufIbge = '31';
+                break;
+            case '498':
+                $ufIbge = '15';
+                break;
+            case '499':
+                $ufIbge = '25';
+                break;
+            case '500':
+                $ufIbge = '41';
+                break;
+            case '501':
+                $ufIbge = '26';
+                break;
+            case '502':
+                $ufIbge = '22';
+                break;
+            case '503':
+                $ufIbge = '33';
+                break;
+            case '504':
+                $ufIbge = '24';
+                break;
+            case '505':
+                $ufIbge = '43';
+                break;
+            case '506':
+                $ufIbge = '11';
+                break;
+            case '507':
+                $ufIbge = '14';
+                break;
+            case '508':
+                $ufIbge = '42';
+                break;
+            case '509':
+                $ufIbge = '35';
+                break;
+            case '510':
+                $ufIbge = '28';
+                break;
+            case '511':
+                $ufIbge = '17';
+                break;
+            default:
+                break;
+        }
+        
+        return $ufIbge;
+    }
+}
