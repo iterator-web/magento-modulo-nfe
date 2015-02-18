@@ -1,2 +1,10 @@
 /app/code/local/iterator/Nfe /app/code/local/iterator/Nfe
+/app/design/adminhtml/default/default/layout/iterator_nfe.xml /app/design/adminhtml/default/default/layout/iterator_nfe.xml
 /app/etc/modules/Iterator_Nfe.xml /app/etc/modules/Iterator_Nfe.xml
+/js/iterator/nfe.js /js/iterator/nfe.js
+/skin/adminhtml/default/default/images/iterator/window/bottom_left.png /skin/adminhtml/default/default/images/iterator/window/bottom_left.png
+/skin/adminhtml/default/default/images/iterator/window/bottom_right.png /skin/adminhtml/default/default/images/iterator/window/bottom_right.png
+/skin/adminhtml/default/default/images/iterator/window/close.png /skin/adminhtml/default/default/images/iterator/window/close.png
+/skin/adminhtml/default/default/images/iterator/window/header.png /skin/adminhtml/default/default/images/iterator/window/header.png
+/skin/adminhtml/default/default/images/iterator/window/top_left.png /skin/adminhtml/default/default/images/iterator/window/top_left.png
+/skin/adminhtml/default/default/images/iterator/window/top_right.png /skin/adminhtml/default/default/images/iterator/window/top_right.png

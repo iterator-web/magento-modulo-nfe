@@ -10,13 +10,49 @@
         </modules>
     </translate>
     
+    <menu>
+        <sales>
+            <children>
+                <nfe module="nfe">
+                    <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                    <sort_order>999</sort_order>               
+                    <children>
+                        <edit module="nfe">
+                            <title>Gerenciar NF-e</title>
+                            <sort_order>0</sort_order>
+                            <action>adminhtml/nfe</action>
+                        </edit>
+                        <settings translate="title" module="nfe">
+                            <title><![CDATA[Op&ccedil;&otilde;es]]></title>
+                            <action>adminhtml/system_config/edit/section/nfe/</action>
+                            <sort_order>1</sort_order>
+                        </settings>
+                    </children>
+                </nfe>
+            </children>
+        </sales>
+    </menu>
     <acl>
         <resources>
             <all>
                 <title>Allow Everything</title>
             </all>
             <admin>
-                <children>                 
+                <children>
+                    <sales>
+                        <children>
+                            <nfe>
+                                <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                                <sort_order>99</sort_order>
+                                <children>
+                                    <edit>
+                                        <title>Gerenciar NF-e</title>
+                                        <sort_order>0</sort_order>
+                                    </edit>
+                                </children>
+                            </nfe>
+                        </children>
+                    </sales>        
                     <system>
                         <children>
                             <config>

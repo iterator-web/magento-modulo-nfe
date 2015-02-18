@@ -45,6 +45,20 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
     }
     
+    public function indexAction() {
+        $this->_initAction()->renderLayout();
+    }
+    
+    protected function _initAction() {
+        $this->loadLayout()
+            ->_setActiveMenu('sales/nfe/nfe')
+            ->_title($this->__('Sales'))->_title($this->__('NF-e'))
+            ->_addBreadcrumb($this->__('Sales'), $this->__('Sales'))
+            ->_addBreadcrumb($this->__(utf8_encode('Nota Fiscal Eletrônica')), $this->__('NF-e'));
+         
+        return $this;
+    }
+    
     public function gerarNfeAction() {
         $orderId = $this->getRequest()->getParam('order_id');
         if ($orderId) {
