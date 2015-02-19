@@ -223,6 +223,7 @@ $installer->run(utf8_encode("
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfeproduto')}` (
     `produto_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Referente ao campo nItem do manual',
     `nfe_id` INT(12) UNSIGNED NOT NULL,
+    `produto` VARCHAR(45) NOT NULL,
     `n_item` INT(3) UNSIGNED NULL,
     `c_prod` VARCHAR(60) NULL,
     `c_ean` VARCHAR(14) NULL,
