@@ -39,7 +39,7 @@ function carregarNfe($adminUrl, skinUrl, nfeId, nNf) {
         parameters	: "nfe_id=" + nfeId,
         onComplete	: function(transport)
         {
-            abrirModalWindow("DADOS REFERENTES A NF-E ("+nNf+")", transport.responseText, 600, 400, skinUrl);
+            abrirModalWindow("DADOS REFERENTES A NF-E ("+nNf+")", transport.responseText, 1030, 400, skinUrl);
         }
     });
 }

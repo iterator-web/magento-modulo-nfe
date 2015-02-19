@@ -114,6 +114,124 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
         $this->_redirect('*/sales_order/');
     }
+    
+    protected function _isAllowed() {
+        return Mage::getSingleton('admin/session')->isAllowed('catalog/controleestoque');
+    }
+    
+    public function exportCsvAction() {
+        $fileName   = 'entrada.csv';
+        $content    = $this->getLayout()->createBlock('controleestoque/adminhtml_controleestoqueentrada_grid')
+            ->getCsv();
+ 
+        $this->_sendUploadResponse($fileName, $content);
+    }
+ 
+    public function exportXmlAction() {
+        $fileName   = 'entrada.xml';
+        $content    = $this->getLayout()->createBlock('controleestoque/adminhtml_controleestoqueentrada_grid')
+            ->getXml();
+ 
+        $this->_sendUploadResponse($fileName, $content);
+    }
+    
+    public function consultarNfeAction() {
+        $nfeId = $this->getRequest()->getParam('nfe_id');
+        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+        $nfeProdutosCollection = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeId));
+        $html .= '<ul style="border:1px solid #333; width:793px; margin:0 auto; padding:0 0 10px;">';
+        $html .= '<li style="background:#ccc; text-align:center; margin-bottom:5px;"><strong>Chave de Acesso: </strong>#'.$nfe->getIdTag().'</li>';
+        $html .= utf8_encode('
+            <li>
+                <strong style="margin:0 50px 0 15px;">Pedido</strong>
+                <strong style="margin-right:68px;">Data da Emissão</strong>
+                <strong style="margin-right:68px;">Data de Saída/Entrada</strong>
+                <strong style="margin-right:68px;">Modelo NF</strong> 
+                <strong style="margin-right:68px;">Série NF</strong> 
+                <strong>Número NF</strong>
+            </li>');
+        $html .= '<li style="margin:0; overflow:hidden;">
+                    <div style="float:left; width:65px; margin-right:25px; margin-left:15px; text-align:left;">'.$nfe->getPedidoIncrementId().'</div>
+                    <div style="float:left; width:100px; margin-right:80px; text-align:center;">'.Mage::helper('core')->formatDate($nfe->getDhEmi(), 'short').'</div>
+                    <div style="float:left; width:100px; margin-right:35px; text-align:center;">'.Mage::helper('core')->formatDate($nfe->getDhSaiEnt(), 'short').'</div>
+                    <div style="float:left; width:85px; margin-right:25px; text-align:right;">'.$nfe->getMod().'</div>
+                    <div style="float:left; width:95px; margin-right:25px; text-align:right;">'.$nfe->getSerie().'</div>
+                    <div style="float:left; width:125px; text-align:right;">'.$nfe->getNNf().'</div>
+                  </li>';
+        $html .= utf8_encode('
+                <li style="margin-top:5px;">
+                    <strong style="margin:0 75px 0 15px;">Base ICMS</strong>
+                    <strong style="margin-right:80px;">Valor ICMS</strong> 
+                    <strong style="margin-right:80px;">Base ICMS Subst.</strong>
+                    <strong style="margin-right:81px;">Valor ICMS Subst.</strong>
+                    <strong>Valor Total Produtos</strong> 
+                </li>');
+        $html .= '<li style="margin:0; overflow:hidden;">
+                    <div style="float:left; width:60px; margin-right:20px; margin-left:15px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVBc(), true, false).'</div>
+                    <div style="float:left; width:118px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVIcms(), true, false).'</div>
+                    <div style="float:left; width:162px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getBcSt(), true, false).'</div>
+                    <div style="float:left; width:163px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVSt(), true, false).'</div>
+                    <div style="float:left; width:177px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVProd(), true, false).'</div>
+                  </li>';
+        $html .= utf8_encode('
+                <li style="margin-top:5px;">
+                    <strong style="margin:0 70px 0 15px;">Valor Frete</strong> 
+                    <strong style="margin-right:70px;">Valor Seguro</strong>
+                    <strong style="margin-right:71px;">Desconto</strong> 
+                    <strong style="margin-right:71px;">Outras Desp.</strong> 
+                    <strong style="margin-right:71px;">Valor IPI</strong>
+                    <strong>Valor Total Nota</strong>
+                </li>');
+        $html .= '<li style="margin:0; overflow:hidden;">
+                    <div style="float:left; width:60px; margin-right:20px; margin-left:15px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVFrete(), true, false).'</div>
+                    <div style="float:left; width:126px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVSeg(), true, false).'</div>
+                    <div style="float:left; width:107px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVDesc(), true, false).'</div>
+                    <div style="float:left; width:125px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVOutro(), true, false).'</div>
+                    <div style="float:left; width:102px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVIpi(), true, false).'</div>
+                    <div style="float:left; width:140px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVNf(), true, false).'</div>
+                  </li>';
+        $html .= '</ul>';
+        $html .= '<div style="padding:30px 0; min-height:280px;">';
+        $html .= '<ul>';
+        $html .= '<li><strong>Itens da Entrada:</strong></li>';
+        $html .= utf8_encode('
+                <li style="background:#ccc; border:1px solid #333;">
+                    <strong style="margin:0 180px 0 70px;">Produto</strong> 
+                    <strong style="margin-right:50px;">Quantidade</strong> 
+                    <strong style="margin-right:73px;">Valor Unitário</strong> 
+                    <strong style="margin-right:67px;">Desconto</strong> 
+                    <strong style="margin-right:67px;">Valor Total</strong> 
+                    <strong style="margin-right:67px;">Valor ICMS</strong> 
+                    <strong>Valor IPI</strong>
+                </li>');
+        foreach($nfeProdutosCollection as $nfeProduto) {
+            $valorIcms = 0;
+            $valorIpi = 0;
+            if($nfeProduto->getTemIcms()) {
+                $produtoImpostoIcms = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                    ->addFieldToFilter('produto_id', $nfeProduto->getProdutoId())->addFieldToFilter('tipo_imposto', 'icms')->getFirstItem();
+                $valorIcms = $produtoImpostoIcms->getVIcms();
+            }
+            if($nfeProduto->getTemIpi()) {
+                $produtoImpostoIpi = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                    ->addFieldToFilter('produto_id', $nfeProduto->getProdutoId())->addFieldToFilter('tipo_imposto', 'ipi')->getFirstItem();
+                $valorIpi = $produtoImpostoIpi->getVIpi();
+            }
+            $html .= '<li style="border:1px solid #333; margin:0; overflow:hidden;">
+                        <div style="float:left; width:280px; margin-right:10px; text-align:left;">'.$nfeProduto->getXProd().'</div>
+                        <div style="float:left; width:45px; margin-right:55px; text-align:right;">'.$nfeProduto->getQTrib().'</div>
+                        <div style="float:left; width:100px; margin-right:10px; text-align:right;">'.Mage::helper('core')->currency($nfeProduto->getVUnTrib(), true, false).'</div>
+                        <div style="float:left; width:120px; margin-right:10px; text-align:right;">'.Mage::helper('core')->currency($nfeProduto->getVDesc(), true, false).'</div>
+                        <div style="float:left; width:120px; margin-right:10px; text-align:right;">'.Mage::helper('core')->currency($nfeProduto->getVProd(), true, false).'</div>
+                        <div style="float:left; width:120px; text-align:right;">'.Mage::helper('core')->currency($valorIcms, true, false).'</div>
+                        <div style="float:left; width:118px; text-align:right;">'.Mage::helper('core')->currency($valorIpi, true, false).'</div>
+                      </li>';
+        }
+        $html .= '</ul>';
+        $html .= '</div>';
+        
+        $this->getResponse()->setBody($html);
+    }
 }
 
 ?>
