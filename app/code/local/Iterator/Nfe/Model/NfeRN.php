@@ -125,7 +125,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         
         $nfe->setPedidoIncrementId($order->getIncrementId());
         $nfe->setStatus('0');
-        $nfe->setMensagem(utf8_encode('Aguardando Aprovação'));
+        $nfe->setMensagem(utf8_encode('Aguardando aprovação para enviar solicitação de autorização ao orgão responsável.'));
         $nfe->setVersao('3.10');
         $nfe->setIdTag('NFe'.$chave);
         $nfe->setCUf($cUF);
@@ -317,6 +317,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     }
                 }
                 $nfeProduto->setNfeId($nfeId);
+                $nfeProduto->setProduto('product/'.$item->getProductId());
                 $nfeProduto->setNItem($nItem);
                 $nfeProduto->setCProd($item->getSku());
                 $nfeProduto->setCEan($gtin);
