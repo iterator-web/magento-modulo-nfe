@@ -64,6 +64,9 @@
                     <nfeprodutoimposto>
                         <table>iterator_nfe_produto_imposto</table>
                     </nfeprodutoimposto>
+                    <nfecobranca>
+                        <table>iterator_nfe_cobranca</table>
+                    </nfecobranca>
                 </entities>
             </nfe_mysql4>
         </models>

@@ -130,9 +130,6 @@ $installer->run(utf8_encode("
     `cob_v_orig` DOUBLE(15,2) NULL,
     `cob_v_desc` DOUBLE(15,2) NULL,
     `cob_v_liq` DOUBLE(13,2) NULL,
-    `cob_n_dup` VARCHAR(60) NULL,
-    `cob_d_venc` DATE NULL,
-    `cob_v_dup` DOUBLE(15,2) NULL,
     `pag_t_pag` TINYINT(2) UNSIGNED NULL,
     `pag_v_pag` DOUBLE(15,2) NULL,
     `pag_cnpj` VARCHAR(14) NULL,
@@ -423,6 +420,21 @@ $installer->run(utf8_encode("
     CONSTRAINT `fk_iterator_nfe_produto_imp_nfe_produto2`
       FOREIGN KEY (`produto_id`)
       REFERENCES `{$installer->getTable('nfe/nfeproduto')}` (`produto_id`)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION)
+  ENGINE = InnoDB CHARSET=utf8;
+  
+  CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfecobranca')}` (
+    `cobranca_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `nfe_id` INT(12) UNSIGNED NOT NULL,
+    `cob_n_dup` VARCHAR(60) NULL,
+    `cob_d_venc` DATE NULL,
+    `cob_v_dup` DOUBLE(15,2) NULL,
+    PRIMARY KEY (`cobranca_id`),
+    INDEX `fk_iterator_nfe_cobranca_nfe_idx` (`nfe_id` ASC),
+    CONSTRAINT `fk_iterator_nfe_cobranca_nfe`
+      FOREIGN KEY (`nfe_id`)
+      REFERENCES `{$installer->getTable('nfe/nfe')}` (`nfe_id`)
       ON DELETE NO ACTION
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
