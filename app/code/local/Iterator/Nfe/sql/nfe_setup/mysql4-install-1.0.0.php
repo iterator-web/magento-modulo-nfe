@@ -184,6 +184,7 @@ $installer->run(utf8_encode("
     `identificacao_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
     `nfe_id` INT(12) UNSIGNED NOT NULL,
     `tipo_identificacao` VARCHAR(45) NULL COMMENT 'emit - dest - retirada - entrega',
+    `crt` TINYINT(1) UNSIGNED NOT NULL,
     `cnpj` VARCHAR(14) NULL,
     `cpf` VARCHAR(11) NULL,
     `x_nome` VARCHAR(60) NULL,
@@ -194,6 +195,7 @@ $installer->run(utf8_encode("
     `x_bairro` VARCHAR(60) NULL,
     `c_mun` INT(7) UNSIGNED NULL,
     `x_mun` VARCHAR(60) NULL,
+    `region_id` INT(10) UNSIGNED NOT NULL,
     `uf` VARCHAR(2) NULL,
     `cep` VARCHAR(8) NULL,
     `c_pais` INT(4) UNSIGNED NULL,
@@ -210,9 +212,15 @@ $installer->run(utf8_encode("
     `email` VARCHAR(60) NULL,
     PRIMARY KEY (`identificacao_id`),
     INDEX `fk_iterator_nfe_identificacao_nfe1_idx` (`nfe_id` ASC),
+    INDEX `fk_iterator_nfe_identific_directory_country_region1_idx` (`region_id` ASC),
     CONSTRAINT `fk_iterator_nfe_identificacao_nfe1`
       FOREIGN KEY (`nfe_id`)
       REFERENCES `{$installer->getTable('nfe/nfe')}` (`nfe_id`)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION)
+    CONSTRAINT `fk_iterator_nfe_identific_directory_country_region1_idx`
+      FOREIGN KEY (`region_id`)
+      REFERENCES `{$installer->getTable('directory/country_region')}` (`region_id`)
       ON DELETE NO ACTION
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
