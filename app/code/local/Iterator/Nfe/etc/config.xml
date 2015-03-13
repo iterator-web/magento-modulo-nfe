@@ -67,6 +67,9 @@
                     <nfecobranca>
                         <table>iterator_nfe_cobranca</table>
                     </nfecobranca>
+                    <nfetransporte>
+                        <table>iterator_nfe_transporte</table>
+                    </nfetransporte>
                 </entities>
             </nfe_mysql4>
         </models>

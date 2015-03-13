@@ -86,7 +86,10 @@ $installer->run(utf8_encode("
     `v_nf` DOUBLE(15,2) NULL,
     `v_tot_trib` DOUBLE(15,2) NULL,
     `v_serv` DOUBLE(15,2) NULL,
+    `v_bc_iss` DOUBLE(15,2) NULL,
     `v_iss` DOUBLE(15,2) NULL,
+    `v_pis_iss` DOUBLE(15,2) NULL,
+    `v_cofins_iss` DOUBLE(15,2) NULL,
     `d_compet` DATE NULL,
     `v_deducao` DOUBLE(15,2) NULL,
     `v_desc_incond` DOUBLE(15,2) NULL,
@@ -117,15 +120,6 @@ $installer->run(utf8_encode("
     `trans_placa` VARCHAR(7) NULL,
     `trans_veic_uf` VARCHAR(2) NULL,
     `trans_rntc` VARCHAR(20) NULL,
-    `trans_vagao` VARCHAR(20) NULL,
-    `trans_balsa` VARCHAR(20) NULL,
-    `trans_q_vol` VARCHAR(15) NULL,
-    `trans_esp` VARCHAR(60) NULL,
-    `trans_marca` VARCHAR(60) NULL,
-    `trans_n_vol` VARCHAR(60) NULL,
-    `trans_peso_l` DOUBLE(15,3) NULL,
-    `trans_peso_b` DOUBLE(15,3) NULL,
-    `trans_n_lacre` VARCHAR(60) NULL,
     `cob_n_fat` VARCHAR(60) NULL,
     `cob_v_orig` DOUBLE(15,2) NULL,
     `cob_v_desc` DOUBLE(15,2) NULL,
@@ -441,6 +435,31 @@ $installer->run(utf8_encode("
     PRIMARY KEY (`cobranca_id`),
     INDEX `fk_iterator_nfe_cobranca_nfe_idx` (`nfe_id` ASC),
     CONSTRAINT `fk_iterator_nfe_cobranca_nfe`
+      FOREIGN KEY (`nfe_id`)
+      REFERENCES `{$installer->getTable('nfe/nfe')}` (`nfe_id`)
+      ON DELETE NO ACTION
+      ON UPDATE NO ACTION)
+  ENGINE = InnoDB CHARSET=utf8;
+  
+  CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfetrasnporte')}` (
+    `reboque_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
+    `nfe_id` INT(12) UNSIGNED NOT NULL,
+    `tipo_informacao` VARCHAR(45) NULL COMMENT ' /* comment truncated */ /*reboque - vol - lacres*/',
+    `placa` VARCHAR(7) NULL,
+    `uf` VARCHAR(2) NULL,
+    `rntc` VARCHAR(20) NULL,
+    `vagao` VARCHAR(20) NULL,
+    `balsa` VARCHAR(20) NULL,
+    `q_vol` INT(15) NULL,
+    `esp` VARCHAR(60) NULL,
+    `marca` VARCHAR(60) NULL,
+    `n_vol` VARCHAR(60) NULL,
+    `peso_l` DOUBLE(15,3) NULL,
+    `peso_b` DOUBLE(15,3) NULL,
+    `n_lacres` VARCHAR(60) NULL,
+    PRIMARY KEY (`reboque_id`),
+    INDEX `fk_iterator_nfe_reboque_nfe_idx` (`nfe_id` ASC),
+    CONSTRAINT `fk_iterator_nfe_reboque_nfe`
       FOREIGN KEY (`nfe_id`)
       REFERENCES `{$installer->getTable('nfe/nfe')}` (`nfe_id`)
       ON DELETE NO ACTION
