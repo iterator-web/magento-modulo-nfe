@@ -44,8 +44,6 @@ class Iterator_Nfe_Block_Adminhtml_Order_View extends Mage_Adminhtml_Block_Sales
                     'onclick'   => 'setLocation(\'' . $this->getUrl('*/nfe/gerarNfe') . '\')',
                     'class'     => 'go'
             ));
-            $this->_removeButton('order_ship');
-            $this->_removeButton('order_hold');
         } else {
             return;
         }
