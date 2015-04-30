@@ -160,6 +160,7 @@ $installer->run(utf8_encode("
     `nfe_id` INT(12) UNSIGNED NOT NULL,
     `tipo_documento` VARCHAR(10) NULL COMMENT 'refNFe - refNF - refNFP - refECF',
     `ref_nfe` VARCHAR(44) NULL,
+    `region_id` INT(10) UNSIGNED NOT NULL,
     `c_uf` TINYINT(2) UNSIGNED NULL,
     `aamm` INT(4) UNSIGNED NULL,
     `cnpj` VARCHAR(14) NULL,
@@ -302,7 +303,7 @@ $installer->run(utf8_encode("
     CONSTRAINT `fk_iterator_nfe_produto_impexp_nfe_produto1`
       FOREIGN KEY (`produto_id`)
       REFERENCES `{$installer->getTable('nfe/nfeproduto')}` (`produto_id`)
-      ON DELETE NO ACTION
+      ON DELETE CASCADE
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
   
@@ -355,7 +356,7 @@ $installer->run(utf8_encode("
     CONSTRAINT `fk_iterator_nfe_produto_esp_nfe_produto1`
       FOREIGN KEY (`produto_id`)
       REFERENCES `{$installer->getTable('nfe/nfeproduto')}` (`produto_id`)
-      ON DELETE NO ACTION
+      ON DELETE CASCADE
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
   
@@ -430,7 +431,7 @@ $installer->run(utf8_encode("
     CONSTRAINT `fk_iterator_nfe_produto_imp_nfe_produto2`
       FOREIGN KEY (`produto_id`)
       REFERENCES `{$installer->getTable('nfe/nfeproduto')}` (`produto_id`)
-      ON DELETE NO ACTION
+      ON DELETE CASCADE
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
   
