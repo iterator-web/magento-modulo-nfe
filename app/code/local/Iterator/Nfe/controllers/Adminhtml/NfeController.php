@@ -535,11 +535,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
                                 ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']))
                                 ->getFirstItem();
-                        if($itensArray['option_'.$i]['c_ean'] == '' || $itensArray['option_'.$i]['c_ean_trib'] == '0') {
+                        if($itensArray['option_'.$i]['c_ean'] == '' || $itensArray['option_'.$i]['c_ean'] == '0') {
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN e portanto está NF-e não é válida.');
                         }
-                        if($itensArray['option_'.$i]['c_ean_trib' || $itensArray['option_'.$i]['c_ean_trib'] == '0'] == '') {
+                        if($itensArray['option_'.$i]['c_ean_trib' || $itensArray['option_'.$i]['c_ean_trib']] == '0') {
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN Tributação e portanto está NF-e não é válida.');
                         }
