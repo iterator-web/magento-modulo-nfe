@@ -37,4 +37,8 @@ class Iterator_Nfe_Model_Mysql4_NfeMunicipio_Collection extends Mage_Core_Model_
     protected function _construct() {
         $this->_init('nfe/nfemunicipio');
     }
+    
+    public function toOptionArray() {
+        return $this->_toOptionArray('municipio_id', 'nome');
+    }
 }

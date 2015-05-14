@@ -35,6 +35,6 @@
 class Iterator_Nfe_Model_Mysql4_NfeMunicipio extends Mage_Core_Model_Mysql4_Abstract {
 
     protected function _construct() {
-        $this->_init('nfe/nfemunicipio', 'codigo');
+        $this->_init('nfe/nfemunicipio', 'municipio_id');
     }
 }
