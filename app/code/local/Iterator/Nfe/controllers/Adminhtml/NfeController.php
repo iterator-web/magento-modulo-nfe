@@ -535,6 +535,34 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
                                 ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']))
                                 ->getFirstItem();
+                        if($itensArray['option_'.$i]['c_ean'] == '' || $itensArray['option_'.$i]['c_ean_trib'] == '0') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['c_ean_trib' || $itensArray['option_'.$i]['c_ean_trib'] == '0'] == '') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN Tributação e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['ncm'] == '' || $itensArray['option_'.$i]['ncm'] == '0') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem NCM e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['cfop'] == '' || $itensArray['option_'.$i]['cfop'] == '0') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem CFOP Tributação e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['u_com'] == '') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem Unidade Comercial e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['u_trib'] == '') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem Unidade Tributável e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['q_com'] == 0) {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e possuem quantidade igual a zero e portanto está NF-e não é válida.');
+                        }
                         $nItem++;
                         $productId = preg_replace('/[^\d]/', '', $itensArray['option_'.$i]['produto']);
                         $produto = Mage::getModel('catalog/product')->load($productId);
