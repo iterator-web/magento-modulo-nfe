@@ -10,4 +10,14 @@
             <block type="nfe/adminhtml_nfe" name="nfe" />
         </reference>
     </adminhtml_nfe_index>
+    <adminhtml_nfe_edit>
+        <update handle="editor"/>
+        <reference name="head">
+            <action method="addCss"><stylesheet>css/iterator/stereotabs.css</stylesheet></action>
+            <action method="addJs"><script>prototype/prototype.maskedinput.js</script></action>
+            <action method="addJs"><script>prototype/stereotabs.js</script></action>
+            <action method="addJs"><script>iterator/nfe_emissao.js</script></action>
+            <action method="addJs"><script>iterator/nfe_validador.js</script></action>
+        </reference>
+    </adminhtml_nfe_edit>
 </layout>

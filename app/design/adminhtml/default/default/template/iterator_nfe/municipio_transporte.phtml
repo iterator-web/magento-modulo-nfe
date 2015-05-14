@@ -1,0 +1,69 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$_htmlId      = $this->getElement()->getHtmlId();
+$_htmlClass   = $this->getElement()->getClass();
+$_htmlName    = $this->getElement()->getName();
+$_readonly    = $this->getElement()->getReadonly();
+$xMun = Mage::registry('nfe')->getTrans_x_mun();
+?>
+
+<tr>
+    <td class="label"><label for="x_mun"><?php echo utf8_encode('Município') ?></label></td>
+    <td class="value">
+        
+        <?php $defSearch = utf8_encode('') ?>
+        <input id="trans_x_mun" name="nfe[trans_x_mun]" type="text" class="validar_municipio input-text" value="<?php if(!empty($xMun)): ?><?php echo $xMun ?><?php else: ?><?php echo $defSearch ?><?php endif ?>" onfocus="if(this.value=='<?php echo $defSearch ?>')this.value=''; " onblur="if(this.value=='')this.value='<?php echo $defSearch ?>';" />
+        <span id="trans_municipio_search_indicator" class="autocomplete-indicator" style="display: none">
+            <img src="<?php echo $this->getSkinUrl('images/ajax-loader.gif') ?>" alt="<?php echo $this->__('Loading...') ?>" class="v-middle"/>
+        </span>
+        <div id="trans_municipio_search_autocomplete" class="autocomplete"></div>
+        <script type="text/javascript">
+            new Ajax.Autocompleter(
+                'trans_x_mun',
+                'trans_municipio_search_autocomplete',
+                '<?php echo $this->getUrl('adminhtml/nfe/municipiosSearch') ?>',
+                {
+                    paramName:"query",
+                    minChars:2,
+                    //indicator:"municipio_search_indicator",
+                    updateElement:getSelectionId,
+                }
+            );
+            function getSelectionId(li) {
+                $("trans_x_mun").value = li.getAttribute('url');
+            }
+        </script>
+    </td>
+</tr>

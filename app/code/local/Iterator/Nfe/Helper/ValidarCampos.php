@@ -191,4 +191,84 @@ class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
         
         return $ufIbge;
     }
+    
+    public function getMunicipio($municipio) {
+        $nfeMunicipio = Mage::getModel('nfe/nfemunicipio')->getCollection()->addfieldToFilter('nome', array('like' => $municipio))->getFirstItem();
+        return $nfeMunicipio;
+    }
+    
+    public function validateDate( $date, $format='YYYY-MM-DD') {
+        switch( $format ) {
+            case 'YYYY/MM/DD':
+            case 'YYYY-MM-DD':
+            list( $y, $m, $d ) = preg_split( '/[-\.\/ ]/', $date );
+            break;
+
+            case 'YYYY/DD/MM':
+            case 'YYYY-DD-MM':
+            list( $y, $d, $m ) = preg_split( '/[-\.\/ ]/', $date );
+            break;
+
+            case 'DD-MM-YYYY':
+            case 'DD/MM/YYYY':
+            list( $d, $m, $y ) = preg_split( '/[-\.\/ ]/', $date );
+            break;
+
+            case 'MM-DD-YYYY':
+            case 'MM/DD/YYYY':
+            list( $m, $d, $y ) = preg_split( '/[-\.\/ ]/', $date );
+            break;
+
+            case 'YYYYMMDD':
+            $y = substr( $date, 0, 4 );
+            $m = substr( $date, 4, 2 );
+            $d = substr( $date, 6, 2 );
+            break;
+
+            case 'YYYYDDMM':
+            $y = substr( $date, 0, 4 );
+            $d = substr( $date, 4, 2 );
+            $m = substr( $date, 6, 2 );
+            break;
+        
+            case 'YYYYDDMM':
+            $y = substr( $date, 0, 4 );
+            $d = substr( $date, 4, 2 );
+            $m = substr( $date, 6, 2 );
+            break;
+        
+            case 'YYYYMM':
+            $y = substr( $date, 0, 4 );
+            $d = substr( $date, 4, 2 );
+            $m = substr( $date, 6, 2 );
+            break;
+
+            default:
+            throw new Exception( "Invalid Date Format" );
+        }
+        return checkdate( $m, $d, $y );
+    }
+    
+    public function validaMinimoMaximo($valor, $min, $max){
+        if (strlen($valor) > $max) {
+            return false;
+        } else if (strlen($valor) < $min) {
+            return false;
+        } else {
+            return true;
+        }
+    }
+
+    public function validaEMail($mail) { 
+        if($mail !== "") {
+            if (ereg("^[-A-Za-z0-9_]+[-A-Za-z0-9_.]*[@]{1}[-A-Za-z0-9_]+[-A-Za-z0-9_.]*[.]{1}[A-Za-z]{2,5}$", $mail)) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
 }

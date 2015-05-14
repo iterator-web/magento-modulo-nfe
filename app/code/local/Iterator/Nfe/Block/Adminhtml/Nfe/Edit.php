@@ -33,22 +33,26 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  */
 
-class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_Grid_Column_Renderer_Abstract {
-   
-    public function render(Varien_Object $row) {
-        $nfeId =  $row->getData('nfe_id');
-        $status =  $row->getData('status');
-        if($status == '0' || $status == '4') {
-            $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/edit/')."nfe_id/".$nfeId.'\');">Editar e Aprovar</a>';
-        } else if($status == '1' || $status == '2' || $status == '5' || $status == '6') {
-            $nNf =  $row->getData('n_nf');
-            $adminUrl = Mage::helper('adminhtml')->getUrl('*/nfe/consultarNfe');
-            $skinUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_SKIN);
-            $acao = '<a href="javascript:carregarNfe(\''.$adminUrl.'\', \''.$skinUrl.'\', \''.$nfeId.'\', \''.$nNf.'\')">Visualizar Detalhes</a>';
-        } else if($status == '3' || $status == '7') {
-            $acao = '<a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
+class Iterator_Nfe_Block_Adminhtml_Nfe_Edit extends Mage_Adminhtml_Block_Widget_Form_Container
+{
+    
+    public function __construct() {
+     
+        parent::__construct();
+        
+        $this->_objectId = 'id';
+        $this->_blockGroup = 'nfe';
+        $this->_controller = 'adminhtml_nfe';
+     
+        $this->_updateButton('save', 'label', $this->__('Salvar e Aprovar Envio da NF-e'));
+        $this->_removeButton('delete');
+    }  
+ 
+    public function getHeaderText() {
+        if( Mage::registry('nfe') && Mage::registry('nfe')->getId() ) {
+            return Mage::helper('nfe')->__("Editar NF-e '%s'", $this->htmlEscape(Mage::registry('nfe')->getNNf()));
+        } else {
+            return Mage::helper('nfe')->__('Nova NF-e');
         }
-        return $acao;
-    }
+    }  
 }
-?>

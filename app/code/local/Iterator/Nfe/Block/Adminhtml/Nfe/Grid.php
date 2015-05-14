@@ -187,10 +187,6 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
          
         return parent::_prepareColumns();
     }
-    
-    public function getRowUrl($row) {
-        return $this->getUrl('*/*/edit', array('id' => $row->getId()));
-    }
 }
 
 ?>

@@ -8,7 +8,6 @@
  * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
  * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
  * propostos pela empresa Iterator Sistemas Web.
- * Contrato: http://www.iterator.com.br/licenca.txt
  *
  * =================================================================
  *                     MÓDULO DE INTEGRAÇÃO NF-E                          
@@ -33,22 +32,18 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  */
 
-class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_Grid_Column_Renderer_Abstract {
-   
-    public function render(Varien_Object $row) {
-        $nfeId =  $row->getData('nfe_id');
-        $status =  $row->getData('status');
-        if($status == '0' || $status == '4') {
-            $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/edit/')."nfe_id/".$nfeId.'\');">Editar e Aprovar</a>';
-        } else if($status == '1' || $status == '2' || $status == '5' || $status == '6') {
-            $nNf =  $row->getData('n_nf');
-            $adminUrl = Mage::helper('adminhtml')->getUrl('*/nfe/consultarNfe');
-            $skinUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_SKIN);
-            $acao = '<a href="javascript:carregarNfe(\''.$adminUrl.'\', \''.$skinUrl.'\', \''.$nfeId.'\', \''.$nNf.'\')">Visualizar Detalhes</a>';
-        } else if($status == '3' || $status == '7') {
-            $acao = '<a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
-        }
-        return $acao;
+class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Renderer_Lacre extends Mage_Adminhtml_Block_Widget implements Varien_Data_Form_Element_Renderer_Interface {
+
+    
+    public function __construct() {
+        $this->setTemplate('iterator_nfe/lacre.phtml');
     }
+
+    public function render(Varien_Data_Form_Element_Abstract $element)
+    {
+        $this->setElement($element);
+        return $this->toHtml();
+    }
+
 }
 ?>

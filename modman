@@ -6,6 +6,8 @@
 /js/iterator/nfe_emissao.js /js/iterator/nfe_emissao.js
 /js/iterator/nfe_validador.js /js/iterator/nfe_validador.js
 /js/prototype/prototype.maskedinput.js /js/prototype/prototype.maskedinput.js
+/js/prototype/stereotabs.js /js/prototype/stereotabs.js
+/skin/adminhtml/default/default/css/iterator/stereotabs.css /skin/adminhtml/default/default/css/iterator/stereotabs.css
 /skin/adminhtml/default/default/images/iterator/window/bottom_left.png /skin/adminhtml/default/default/images/iterator/window/bottom_left.png
 /skin/adminhtml/default/default/images/iterator/window/bottom_right.png /skin/adminhtml/default/default/images/iterator/window/bottom_right.png
 /skin/adminhtml/default/default/images/iterator/window/close.png /skin/adminhtml/default/default/images/iterator/window/close.png

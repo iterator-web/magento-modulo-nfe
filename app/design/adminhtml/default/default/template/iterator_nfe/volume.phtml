@@ -1,0 +1,106 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$_htmlId      = $this->getElement()->getHtmlId();
+$_htmlClass   = $this->getElement()->getClass();
+$_htmlName    = $this->getElement()->getName();
+$_readonly    = $this->getElement()->getReadonly();
+$nfeId = Mage::registry('nfe')->getNfeId();
+$collection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'vol');
+$_counter = 0;
+?>
+
+<tr>
+    <td class="label"><?php echo $this->getElement()->getLabel() ?></td>
+    <td colspan="10" class="grid volume">
+        <table id="attribute-options-table-volume" class="dynamic-grid nfe-volume" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <td colspan="6" align="center" bgcolor="#D7E5EF" style="font-weight:bold;font-size:13px; min-width:600px;">Tabela com os volumes utilizados no transporte</td>
+                    <td bgcolor="#D7E5EF">
+                        <button id="add_new_option_button_volume" title="Add Option" type="button" class="scalable add">
+                            <span><?php echo $this->__('Adicionar Volume') ?></span>
+                        </button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="headings">
+                    <th style="text-align:center; width:70px;" title="Quantidade">Quantidade</th>
+                    <th style="text-align:center; width:100px;" title="<?php echo utf8_encode('Espécie') ?>"><?php echo utf8_encode('Espécie') ?></th>
+                    <th style="text-align:center; width:100px;" title="Marca">Marca</th>
+                    <th style="text-align:center; width:100px;" title="<?php echo utf8_encode('Numeração') ?>"><?php echo utf8_encode('Numeração') ?></th>
+                    <th style="text-align:center; width:70px;" title="<?php echo utf8_encode('Peso Líquido') ?>"><?php echo utf8_encode('Peso Líquido') ?></th>
+                    <th style="text-align:center; width:70px;" title="Peso Bruto">Peso Bruto</th>
+                    <th style="text-align:center; width:70px;"><?php echo utf8_encode('Ação') ?></th>
+                </tr>
+                <?php foreach ($collection as $volume): ?>
+                <tr class="option-row nfe-transporte-volumerow" id="volume-row-<?php echo $_counter?>">                    
+                    <td align="center"><input id="q_vol<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][q_vol]" value="<?php echo $volume->getQVol() ?>" class="input-text required-entry" type="text"></td>
+                    <td align="center"><input id="esp<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][esp]" value="<?php echo $volume->getEsp() ?>" class="input-text" type="text"></td>
+                    <td align="center"><input id="marca<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][marca]" value="<?php echo $volume->getMarca() ?>" class="input-text" type="text"></td>
+                    <td align="center"><input id="n_vol<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][n_vol]" value="<?php echo $volume->getNVol() ?>" type="text" class="input-text"></td>
+                    <td align="center"><input id="peso_l<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][peso_l]" value="<?php echo $volume->getPesoL() ?>" type="text" class="input-text"></td>
+                    <td align="center"><input id="peso_b<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][peso_b]" value="<?php echo $volume->getPesoB() ?>" type="text" class="input-text"></td>
+                    <td align="center" class="" id="delete_button_container_option_<?php echo $_counter ?>'">
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][id]" value="<?php echo $volume->getId() ?>" type="hidden">
+                        <input id="delete-row-<?php echo $_counter ?>" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_<?php echo $_counter ?>]" value=""/>
+                        <button onclick="$('volume-row-<?php echo $_counter ?>').style.display='none'; $('delete-row-<?php echo $_counter ?>').setValue(1); $('q_vol<?php echo $_counter?>value').removeClassName('required-entry'); removerVolume(<?php echo $_counter ?>);" title="Delete" type="button" class="scalable delete delete-option">    
+                            <span>Retirar</span>
+                        </button>
+                    </td>
+                </tr>
+                <?php 
+                $_counter++;
+                endforeach;
+                ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" align="left" style="font-style:italic;font-size:10px;"><?php echo utf8_encode('* A unidade de medida utilizda nos campos referentes aos pesos dos volumes é Kg') ?></td>
+                </tr>
+            </tfoot>
+        </table>
+    </td>
+</tr>
+<script type="text/javascript">
+//<![CDATA[
+var _form_html_row_volume = '<tr class="option-row nfe-transporte-volumerow" id="volume-row-{{id}}"><td align="center"><input id="q_vol{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][q_vol]" value="" class="input-text required-entry" type="text"></td><td align="center"><input id="esp{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][esp]" value="" class="input-text" type="text"></td><td align="center"><input id="marca{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][marca]" value="" class="input-text" type="text"></td><td align="center"><input id="n_vol{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][n_vol]" value="" class="input-text" type="text"></td><td align="center"><input id="peso_l{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][peso_l]" value="" class="input-text" type="text"></td><td align="center"><input id="peso_b{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][peso_b]" value="" class="input-text" type="text"></td><td align="center" class="" id="delete_button_container_option_{{id}}"><input name="<?php echo $_htmlName; ?>[value][option_{{id}}][id]" value="" type="hidden"><input id="delete-row-{{id}}" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_{{id}}]" value=""/><button onclick="$(\'volume-row-{{id}}\').style.display=\'none\'; $(\'delete-row-{{id}}\').setValue(1); $(\'q_vol{{id}}value\').removeClassName(\'input-text required-entry\'); removerVolume({{id}});" title="Delete" type="button" class="scalable delete delete-option"><span>Retirar</span></button></td></tr>';
+var _nfetransporte_counter_volume = <?php echo $_counter?>;
+$('add_new_option_button_volume').observe('click', function(){
+    $('attribute-options-table-volume').insert(_form_html_row_volume.replace(/\{\{id\}\}/ig, _nfetransporte_counter_volume));
+    _nfetransporte_counter_volume++;
+});
+//]]>
+</script>

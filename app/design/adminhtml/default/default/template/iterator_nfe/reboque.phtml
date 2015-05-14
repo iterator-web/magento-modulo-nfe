@@ -1,0 +1,104 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$_htmlId      = $this->getElement()->getHtmlId();
+$_htmlClass   = $this->getElement()->getClass();
+$_htmlName    = $this->getElement()->getName();
+$_readonly    = $this->getElement()->getReadonly();
+$nfeId = Mage::registry('nfe')->getNfeId();
+$collection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'reboque');
+$_counter = 0;
+?>
+
+<tr>
+    <td class="label"><?php echo $this->getElement()->getLabel() ?></td>
+    <td colspan="10" class="grid reboque">
+        <table id="attribute-options-table-reboque" class="dynamic-grid nfe-reboque" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <td colspan="5" align="center" bgcolor="#D7E5EF" style="font-weight:bold;font-size:13px; min-width:600px;">Tabela com os reboques utilizados no transporte</td>
+                    <td bgcolor="#D7E5EF">
+                        <button id="add_new_option_button_reboque" title="Add Option" type="button" class="scalable add">
+                            <span><?php echo $this->__('Adicionar Reboque') ?></span>
+                        </button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="headings">
+                    <th style="text-align:center; width:100px;" title="Placa">Placa</th>
+                    <th style="text-align:center; width:50px;" title="UF">UF</th>
+                    <th style="text-align:center; width:100px;" title="RNTC">RNTC</th>
+                    <th style="text-align:center; width:100px;" title="<?php echo utf8_encode('Vagão') ?>"><?php echo utf8_encode('Vagão') ?></th>
+                    <th style="text-align:center; width:100px;" title="Balsa">Balsa</th>
+                    <th style="text-align:center; width:70px;"><?php echo utf8_encode('Ação') ?></th>
+                </tr>
+                <?php foreach ($collection as $reboque): ?>
+                <tr class="option-row nfe-transporte-reboquerow" id="reboque-row-<?php echo $_counter?>">                    
+                    <td align="center"><input id="placa<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][placa]" value="<?php echo $reboque->getPlaca() ?>" class="input-text required-entry" type="text"></td>
+                    <td align="center"><input id="uf<?php echo $_counter?>value" maxlength="2" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][uf]" value="<?php echo $reboque->getUf() ?>" class="input-text" type="text"></td>
+                    <td align="center"><input id="rntc<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][rntc]" value="<?php echo $reboque->getRntc() ?>" class="input-text" type="text"></td>
+                    <td align="center"><input id="vagao<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][vagao]" value="<?php echo $reboque->getVagao() ?>" type="text" class="input-text"></td>
+                    <td align="center"><input id="balsa<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][balsa]" value="<?php echo $reboque->getBalsa() ?>" type="text" class="input-text"></td>
+                    <td align="center" class="" id="delete_button_container_option_<?php echo $_counter ?>'">
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][id]" value="<?php echo $reboque->getId() ?>" type="hidden">
+                        <input id="delete-row-<?php echo $_counter ?>" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_<?php echo $_counter ?>]" value=""/>
+                        <button onclick="$('reboque-row-<?php echo $_counter ?>').style.display='none'; $('delete-row-<?php echo $_counter ?>').setValue(1); $('placa<?php echo $_counter?>value').removeClassName('required-entry'); removerReboque(<?php echo $_counter ?>);" title="Delete" type="button" class="scalable delete delete-option">    
+                            <span>Retirar</span>
+                        </button>
+                    </td>
+                </tr>
+                <?php 
+                $_counter++;
+                endforeach;
+                ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="6" align="left" style="font-style:italic;font-size:10px;"><?php echo utf8_encode('* Máximo de 05 reboques permitidos por transporte na NF-e.') ?></td>
+                </tr>
+            </tfoot>
+        </table>
+    </td>
+</tr>
+<script type="text/javascript">
+//<![CDATA[
+var _form_html_row_reboque = '<tr class="option-row nfe-transporte-reboquerow" id="reboque-row-{{id}}"><td align="center"><input id="placa{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][placa]" value="" class="input-text required-entry" type="text"></td><td align="center"><input id="uf{{id}}value" maxlength="2" name="<?php echo $_htmlName; ?>[value][option_{{id}}][uf]" value="" class="input-text" type="text"></td><td align="center"><input id="rntc{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][rntc]" value="" class="input-text" type="text"></td><td align="center"><input id="vagao{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][vagao]" value="" class="input-text" type="text"></td><td align="center"><input id="balsa{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][balsa]" value="" class="input-text" type="text"></td><td align="center" class="" id="delete_button_container_option_{{id}}"><input name="<?php echo $_htmlName; ?>[value][option_{{id}}][id]" value="" type="hidden"><input id="delete-row-{{id}}" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_{{id}}]" value=""/><button onclick="$(\'reboque-row-{{id}}\').style.display=\'none\'; $(\'delete-row-{{id}}\').setValue(1); $(\'placa{{id}}value\').removeClassName(\'input-text required-entry\'); removerReboque({{id}});" title="Delete" type="button" class="scalable delete delete-option"><span>Retirar</span></button></td></tr>';
+var _nfetransporte_counter_reboque = <?php echo $_counter?>;
+$('add_new_option_button_reboque').observe('click', function(){
+    $('attribute-options-table-reboque').insert(_form_html_row_reboque.replace(/\{\{id\}\}/ig, _nfetransporte_counter_reboque));
+    _nfetransporte_counter_reboque++;
+});
+//]]>
+</script>

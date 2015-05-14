@@ -1,0 +1,96 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$_htmlId      = $this->getElement()->getHtmlId();
+$_htmlClass   = $this->getElement()->getClass();
+$_htmlName    = $this->getElement()->getName();
+$_readonly    = $this->getElement()->getReadonly();
+$nfeId = Mage::registry('nfe')->getNfeId();
+$collection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'lacres');
+$_counter = 0;
+?>
+
+<tr>
+    <td class="label"><?php echo $this->getElement()->getLabel() ?></td>
+    <td colspan="10" class="grid lacre">
+        <table id="attribute-options-table-lacre" class="dynamic-grid nfe-lacre" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <td colspan="1" align="center" bgcolor="#D7E5EF" style="font-weight:bold;font-size:13px; min-width:600px;">Tabela com os lacres utilizados no transporte</td>
+                    <td bgcolor="#D7E5EF">
+                        <button id="add_new_option_button_lacre" title="Add Option" type="button" class="scalable add">
+                            <span><?php echo $this->__('Adicionar Lacre') ?></span>
+                        </button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="headings">
+                    <th style="text-align:center; width:100px;" title="<?php echo utf8_encode('Número') ?>"><?php echo utf8_encode('Número') ?></th>
+                    <th style="text-align:center; width:70px;"><?php echo utf8_encode('Ação') ?></th>
+                </tr>
+                <?php foreach ($collection as $lacre): ?>
+                <tr class="option-row nfe-transporte-lacrerow" id="lacre-row-<?php echo $_counter?>">                    
+                    <td align="center"><input id="n_lacre<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][n_lacre]" value="<?php echo $lacre->getNLacre() ?>" class="input-text required-entry" type="text"></td>
+                    <td align="center" class="" id="delete_button_container_option_<?php echo $_counter ?>'">
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][id]" value="<?php echo $lacre->getId() ?>" type="hidden">
+                        <input id="delete-row-<?php echo $_counter ?>" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_<?php echo $_counter ?>]" value=""/>
+                        <button onclick="$('lacre-row-<?php echo $_counter ?>').style.display='none'; $('delete-row-<?php echo $_counter ?>').setValue(1); $('n_lacre<?php echo $_counter?>value').removeClassName('required-entry'); removerLacre(<?php echo $_counter ?>);" title="Delete" type="button" class="scalable delete delete-option">    
+                            <span>Retirar</span>
+                        </button>
+                    </td>
+                </tr>
+                <?php 
+                $_counter++;
+                endforeach;
+                ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" align="left" style="font-style:italic;font-size:10px;"><?php echo utf8_encode('* Máximo de 5000 lacres permitidos por transporte na NF-e.') ?></td>
+                </tr>
+            </tfoot>
+        </table>
+    </td>
+</tr>
+<script type="text/javascript">
+//<![CDATA[
+var _form_html_row_lacre = '<tr class="option-row nfe-transporte-lacrerow" id="lacre-row-{{id}}"><td align="center"><input id="n_lacre{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][n_lacre]" value="" class="input-text required-entry" type="text"></td><td align="center" class="" id="delete_button_container_option_{{id}}"><input name="<?php echo $_htmlName; ?>[value][option_{{id}}][id]" value="" type="hidden"><input id="delete-row-{{id}}" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_{{id}}]" value=""/><button onclick="$(\'lacre-row-{{id}}\').style.display=\'none\'; $(\'delete-row-{{id}}\').setValue(1); $(\'n_lacre{{id}}value\').removeClassName(\'input-text required-entry\'); removerLacre({{id}});" title="Delete" type="button" class="scalable delete delete-option"><span>Retirar</span></button></td></tr>';
+var _nfetransporte_counter_lacre = <?php echo $_counter?>;
+$('add_new_option_button_lacre').observe('click', function(){
+    $('attribute-options-table-lacre').insert(_form_html_row_lacre.replace(/\{\{id\}\}/ig, _nfetransporte_counter_lacre));
+    _nfetransporte_counter_lacre++;
+});
+//]]>
+</script>

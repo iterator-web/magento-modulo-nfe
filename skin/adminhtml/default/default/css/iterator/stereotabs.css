@@ -1,0 +1,85 @@
+.container-tabs {
+    margin:5px 0 0;
+    border:1px solid #ccc;
+}
+.panel .form-list {
+    margin: 0!important;
+}
+.label-itens-tab, .value-itens-tab {
+    border: 0px none !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+    padding-left: 5px !important;
+    background: none repeat scroll 0px center #EEE !important;
+    width: 200px;
+}
+.option-row.nfe-itemrow {
+    background-color:#fffdf4!important;
+}
+.value-itens-tab {
+    width: 280px;
+}
+.checkbox-itens-tab {
+    width:0px!important;
+}
+ul#tabnav {
+    background: url("../../images/sort_row_bg.gif") repeat-x scroll 0px 50% transparent;
+    border-bottom:1px solid #ccc;
+    height:20px;
+    margin:0pt;
+    padding:0pt;
+    display:block;
+    line-height:20px;
+}
+ul#tabnav li {
+    margin:0;
+    padding:0;
+    float:left;
+    height:20px;
+    list-style-type:none;
+    position:relative;
+    border-width: 1px;
+    border-bottom: 0;
+    border-color: #F9F9F9 #D1CFCF #F9F9F9 #F9F9F9;
+    border-style: solid;
+}
+ul#tabnav li a {
+    color:#2F2F2F;
+    font-size:0.9em;
+    font-weight:bold;
+    line-height:20px;
+    text-decoration:none;
+    display:block;
+    float:left;
+    height:20px;
+    margin:0pt 5px 0pt 5px;
+    padding:0pt 6px;
+    position:relative;
+}
+ul#tabnav li a:hover, ul#tab li a.active, .tab.selected {
+    background:#fff none repeat scroll 0%;
+}
+ul#tabnav li .disabled {
+    color:#ccc;
+    font-size:0.9em;
+    font-weight:bold;
+    line-height:20px;
+    text-decoration:none;
+    display:block;
+    float:left;
+    height:20px;
+    margin:0pt 5px 0pt 5px;
+    padding:0pt 6px;
+    position:relative;
+    cursor:default;
+}
+.panel {
+    background:#eee none repeat scroll 0%;
+    display:block;
+    padding: 15px 10px;
+}
+.content {
+    line-height:15px;
+    padding:13px 35px 15px 15px;
+    text-align:left;
+}

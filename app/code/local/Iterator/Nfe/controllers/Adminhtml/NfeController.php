@@ -59,6 +59,838 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         return $this;
     }
     
+    public function newAction() {
+        $this->_forward('edit');
+    }
+    
+    public function editAction() {
+        $nfeId  = $this->getRequest()->getParam('nfe_id');
+        $model = Mage::getModel('nfe/nfe');
+        $referenciadoModel = Mage::getModel('nfe/nfereferenciado');
+        $emitenteModel = Mage::getModel('nfe/nfeidentificacao');
+        $destinatarioModel = Mage::getModel('nfe/nfeidentificacao');
+        $retiradaModel = Mage::getModel('nfe/nfeidentificacao');
+        $entregaModel = Mage::getModel('nfe/nfeidentificacao');
+        
+        if($nfeId) {
+            $model->load($nfeId);
+            $referenciadoModel = Mage::getModel('nfe/nfereferenciado')->getCollection()
+                ->addFieldToFilter('nfe_id', $model->getNfeId())->getFirstItem();
+            $emitenteModel = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                ->addFieldToFilter('nfe_id', $model->getNfeId())->addFieldToFilter('tipo_identificacao', 'emit')->getFirstItem();
+            $destinatarioModel = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                ->addFieldToFilter('nfe_id', $model->getNfeId())->addFieldToFilter('tipo_identificacao', 'dest')->getFirstItem();
+            $retiradaModel = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                ->addFieldToFilter('nfe_id', $model->getNfeId())->addFieldToFilter('tipo_identificacao', 'retirada')->getFirstItem();
+            $entregaModel = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                ->addFieldToFilter('nfe_id', $model->getNfeId())->addFieldToFilter('tipo_identificacao', 'entrega')->getFirstItem();
+            if (!$model->getId()) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__(utf8_encode('Esta NF-e já não existe mais.')));
+                $this->_redirect('*/*/');
+                return;
+            }
+        } else {
+            $this->setEmitenteInfos($emitenteModel);
+            $destinatarioModel->setTipoIdentificacao('dest');
+        }
+        
+        $this->_title($model->getId() ? $model->getNNf() : $this->__('Nova NF-e'));
+
+        $data = Mage::getSingleton('adminhtml/session')->getNfeData(true);
+        if (!empty($data)) {
+            $model->setData($data);
+        }
+        
+        $model->setData();
+        Mage::register('nfe', $model);
+        Mage::register('nfe_referenciado', $referenciadoModel);
+        Mage::register('nfe_emitente', $emitenteModel);
+        Mage::register('nfe_destinatario', $destinatarioModel);
+        Mage::register('nfe_entrega', $entregaModel);
+        Mage::register('nfe_retirada', $retiradaModel);
+        
+        $this->_initAction()
+            ->_addBreadcrumb($nfeId ? $this->__('Editar NF-e') : $this->__('Nova NF-e'), $entradaId ? $this->__('Editar NF-e') : $this->__('Nova NF-e'))
+            ->_addContent($this->getLayout()->createBlock('nfe/adminhtml_nfe_edit')->setData('action', $this->getUrl('*/*/save')))
+            ->_addLeft($this->getLayout()->createBlock('nfe/adminhtml_nfe_edit_tabs'))
+            ->renderLayout();
+    }
+    
+    public function saveAction() {
+        $postData = $this->getRequest()->getPost();
+        $erro = false;
+        $msgErro = null;
+        //var_dump($postData['itens']); exit();
+        if ($postData) {
+            $validarCampos = Mage::helper('nfe/ValidarCampos');
+            $model = Mage::getSingleton('nfe/nfe');
+            $model->setData($postData['nfe']);
+            try {
+                $dhEmiOrginal = str_replace('/', '-', $postData['nfe']['dh_emi']);
+                $dhEmi= substr($dhEmiOrginal,0,6).'20'.substr($dhEmiOrginal,6).':00';
+                if (!$validarCampos->validateDate(substr($dhEmi,0,8), 'YYYY-MM-DD')) {
+                    $erro = true;
+                    $msgErro = utf8_encode('A data de emissão da NF-e não é válida.');
+                }
+                $dhSaiEntOrginal = str_replace('/', '-', $postData['nfe']['dh_sai_ent']);
+                $dhSaiEnt = substr($dhEmiOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
+                if (!$validarCampos->validateDate(substr($dhSaiEnt,0,8), 'YYYY-MM-DD')) {
+                    $erro = true;
+                    $msgErro = utf8_encode('A data de entrada/saída da NF-e não é válida.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['nfe']['nat_op'], 1, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('A natureza da operação da NF-e não é válida.');
+                }
+                $estadoEmitente = Mage::getModel('directory/region')->load($postData['emitente']['region_id']);
+                $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getRegionId());
+                $cnpj = preg_replace('/[^\d]/', '', $postData['emitente']['cnpj']);
+                if(!$validarCampos->validarCnpj($cnpj)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O CNPJ do emitente da NF-e não é válido.');
+                }
+                $nfeMunicipio = $validarCampos->getMunicipio($postData['emitente']['x_mun']);
+                if(!$nfeMunicipio->getCodigo()) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O Munícipio do emitente da NF-e não é válido.');
+                }
+                $cMunFG = $nfeMunicipio->getIbgeUf().$nfeMunicipio->getCodigo();
+                $xMun = $nfeMunicipio->getNome();
+                $nfeRN = Mage::getModel('nfe/nfeRN');
+                if(!$model->getNfeId()) {
+                    $nfeRange = Mage::getModel('nfe/nferange')->load('1');
+                    $serie = $nfeRange->getSerie();
+                    $nNF = $nfeRange->getNumero();
+                    $nfeRN->setRange($nfeRange);
+                    $tpEmis = Mage::getStoreConfig('nfe/nfe_opcoes/emissao');
+                    $cNF = $nfeRN->gerarCodigoNumerico();
+                    $mod = '55';
+                    $aamm = date('ym');
+                    $formatoDanfe = Mage::getStoreConfig('nfe/danfe_opcoes/formato');
+                    if($formatoDanfe == 'portraite') {
+                        $tpImp = '1';
+                    } else if($formatoDanfe == 'landscape') {
+                        $tpImp = '2';
+                    }
+                    $ambiente = Mage::getStoreConfig('nfe/nfe_opcoes/ambiente');
+                    if($ambiente == 'producao') {
+                        $tpAmb = '1';
+                    } else if($ambiente == 'homologacao') {
+                        $tpAmb = '2';
+                    }
+                    $chave = $cUF . $aamm . $cnpj . $mod . $serie . $nNF . $tpEmis . $cNF;
+                    $cDV = $nfeRN->calcularDV($chave);
+                    $chave .= $cDV;
+                    $model->setVersao('3.10');
+                    $model->setIdTag('NFe'.$chave);
+                    $model->setCUf($cUF);
+                    $model->setCNf($cNF);
+                    $model->setMod($mod);
+                    $model->setSerie($serie);
+                    $model->setNNf($nNF);
+                    $model->setCMunFg($cMunFG);
+                    $model->setTpImp($tpImp);
+                    $model->setTpEmis($tpEmis);
+                    $model->setCDv($cDV);
+                    $model->setTpAmb($tpAmb);
+                    $model->setProcEmi('0');
+                    $model->setVerProc('1.0.0');
+                }
+                $model->setDhEmi($dhEmi);
+                $model->setDhSaiEnt($dhSaiEnt);
+                $model->setTransCnpj(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cnpj']));
+                $model->setTransCpf(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cpf']));
+                $nfeMunicipioTransporte = $validarCampos->getMunicipio($postData['nfe']['trans_x_mun']);
+                if($postData['nfe']['trans_x_mun'] != '' && !$nfeMunicipioTransporte->getCodigo()) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O Munícipio do transportador da NF-e não é válido.');
+                }
+                $model->setTrans_x_mun($nfeMunicipioTransporte->getNome());
+                $estadoTransp = Mage::getModel('directory/region')->load($postData['nfe']['region_id']);
+                $model->setTransRegionId($estadoTransp->getRegionId());
+                $model->setTransUf($estadoTransp->getCode());
+                $model->save();
+                $nfeId = $model->getNfeId();
+                
+                $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('tipo_identificacao', array('eq' => 'emit'))
+                                ->getFirstItem();
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['x_nome'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O nome ou razão social do emitente da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['x_fant'], 0, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O nome fantasia do emitente da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['ie'], 1, 14)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('A IE do emitente da NF-e não é válida.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['x_lgr'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O logradouro do endereço do emitente da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['nro'], 1, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O número do endereço do emitente da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['x_cpl'], 0, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O complemento do endereço do emitente da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['emitente']['x_bairro'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O bairro do endereço do emitante da NF-e não é válido.');
+                }
+                $identificacaoIdEmitente = $nfeIdentificacaoEmitente->getIdentificacaoId();
+                $nfeIdentificacaoEmitente->setData($postData['emitente']);
+                if($identificacaoIdEmitente) {
+                    $nfeIdentificacaoEmitente->setIdentificacaoId($identificacaoIdEmitente);
+                }
+                $nfeIdentificacaoEmitente->setNfeId($nfeId);
+                $nfeIdentificacaoEmitente->setTipoPessoa(2);
+                $nfeIdentificacaoEmitente->setCnpj($cnpj);
+                $nfeIdentificacaoEmitente->setCMun($cMunFG);
+                $nfeIdentificacaoEmitente->setXMun($xMun);
+                $nfeIdentificacaoEmitente->setRegionId($estadoEmitente->getRegionId());
+                $nfeIdentificacaoEmitente->setUf($estadoEmitente->getCode());
+                $nfeIdentificacaoEmitente->setCep(preg_replace('/[^\d]/', '', $postData['emitente']['cep']));
+                $nfeIdentificacaoEmitente->setCPais('1058');
+                $nfeIdentificacaoEmitente->setXPais('Brasil');
+                $nfeIdentificacaoEmitente->setFone(preg_replace('/[^\d]/', '', $postData['emitente']['fone']));
+                $nfeIdentificacaoEmitente->save();
+                
+                $estadoDestinatario = Mage::getModel('directory/region')->load($postData['destinatario']['region_id']);
+                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_nome'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O nome ou razão social do destinatário da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_lgr'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O logradouro do endereço do destinatário da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['nro'], 1, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O número do endereço do destinatário da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_cpl'], 0, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O complemento do endereço do destinatário da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_bairro'], 2, 60)) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O bairro do endereço do destinatário da NF-e não é válido.');
+                }
+                if(!$validarCampos->validaEMail($postData['destinatario']['email'])) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O e-mail do destinatário da NF-e não é válido.');
+                }
+                $nfeMunicipioDestinatario = $validarCampos->getMunicipio($postData['destinatario']['x_mun']);
+                if(!$nfeMunicipioDestinatario->getCodigo()) {
+                    $erro = true;
+                    $msgErro = utf8_encode('O Munícipio do destinatário da NF-e não é válido.');
+                }
+                $nfeIdentificacaoDestinatario = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('tipo_identificacao', array('eq' => 'dest'))
+                                ->getFirstItem();
+                $identificacaoIdDestinatario = $nfeIdentificacaoDestinatario->getIdentificacaoId();
+                $nfeIdentificacaoDestinatario->setData($postData['destinatario']);
+                if($identificacaoIdDestinatario) {
+                    $nfeIdentificacaoDestinatario->setIdentificacaoId($identificacaoIdDestinatario);
+                }
+                $nfeIdentificacaoDestinatario->setNfeId($nfeId);
+                if($postData['destinatario']['cnpj']) {
+                    if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['ie'], 1, 14)) {
+                        $erro = true;
+                        $msgErro = utf8_encode('A IE do destinatário da NF-e não é válida.');
+                    }
+                    $nfeIdentificacaoDestinatario->setCnpj(preg_replace('/[^\d]/', '', $postData['destinatario']['cnpj']));
+                }
+                if($postData['destinatario']['cpf']) {
+                    $nfeIdentificacaoDestinatario->setCpf(preg_replace('/[^\d]/', '', $postData['destinatario']['cpf']));
+                }
+                $nfeIdentificacaoDestinatario->setCMun($nfeMunicipioDestinatario->getIbgeUf().$nfeMunicipioDestinatario->getCodigo());
+                $nfeIdentificacaoDestinatario->setXMun($nfeMunicipioDestinatario->getNome());
+                $nfeIdentificacaoDestinatario->setRegionId($estadoDestinatario->getRegionId());
+                $nfeIdentificacaoDestinatario->setUf($estadoDestinatario->getCode());
+                $nfeIdentificacaoDestinatario->setCep(preg_replace('/[^\d]/', '', $postData['destinatario']['cep']));
+                $nfeIdentificacaoDestinatario->setCPais('1058');
+                $nfeIdentificacaoDestinatario->setXPais('Brasil');
+                $nfeIdentificacaoDestinatario->setFone(preg_replace('/[^\d]/', '', $postData['destinatario']['fone']));
+                $nfeIdentificacaoDestinatario->save();
+                
+                if($postData['nfe']['fin_nfe'] != '1') {
+                    $nfeReferenciado = Mage::getModel('nfe/nfereferenciado')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('tipo_documento', array('eq' => $postData['referenciado']['tipo_documento']))
+                                ->getFirstItem();
+                    $referenciadoId = $nfeReferenciado->getReferenciadoId();
+                    $nfeReferenciado->setData($postData['referenciado']);
+                    if($referenciadoId) {
+                        $nfeReferenciado->setReferenciadoId($referenciadoId);
+                    }
+                    $nfeReferenciado->setNfeId($nfeId);
+                    if($postData['referenciado']['tipo_documento'] == 'refNF' || $postData['referenciado']['tipo_documento'] == 'refNFP') {
+                        if($postData['referenciado']['tipo_documento'] == 'refNFP') {
+                            $cpf = preg_replace('/[^\d]/', '', $postData['referenciado']['cpf']);
+                            $nfeReferenciado->setCpf($cpf);
+                        }
+                        $nfeReferenciado->setAamm(preg_replace('/[^\d]/', '', $postData['referenciado']['aamm']));
+                        $cnpj = preg_replace('/[^\d]/', '', $postData['referenciado']['cnpj']);
+                        $estadoReferenciado = Mage::getModel('directory/region')->load($postData['referenciado']['region_id']);
+                        $referenciadoCUF = $validarCampos->getUfEquivalente($estadoReferenciado->getRegionId());
+                        $nfeReferenciado->setCnpj($cnpj);
+                        $nfeReferenciado->setCUf($referenciadoCUF);
+                        if(!$estadoReferenciado->getRegionId()) {
+                            $erro = true;
+                            $msgErro = utf8_encode('O Estado do referenciado da NF-e não é válido.');
+                        }
+                    } else {
+                        $nfeReferenciado->setRegionId('0');
+                    }
+                    $nfeReferenciado->save();
+                    $model->setTemReferencia('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['tem_retirada'])) {
+                    $nfeIdentificacaoRetirada = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('tipo_identificacao', array('eq' => 'retirada'))
+                                ->getFirstItem();
+                    $identificacaoIdRetirada = $nfeIdentificacaoRetirada->getIdentificacaoId();
+                    $nfeIdentificacaoRetirada->setData($postData['retirada']);
+                    if($identificacaoIdRetirada) {
+                        $nfeIdentificacaoRetirada->setIdentificacaoId($identificacaoIdRetirada);
+                    }
+                    $nfeIdentificacaoRetirada->setNfeId($nfeId);
+                    if($postData['retirada']['cnpj']) {
+                        $nfeIdentificacaoRetirada->setCnpj(preg_replace('/[^\d]/', '', $postData['retirada']['cnpj']));
+                    }
+                    if($postData['retirada']['cpf']) {
+                        $nfeIdentificacaoRetirada->setCpf(preg_replace('/[^\d]/', '', $postData['retirada']['cpf']));
+                    }
+                    $nfeMunicipioRetirada = $validarCampos->getMunicipio($postData['retirada']['x_mun']);
+                    if(!$nfeMunicipioRetirada->getCodigo()) {
+                        $erro = true;
+                        $msgErro = utf8_encode('O Munícipio de retirada da NF-e não é válido.');
+                    }
+                    $nfeIdentificacaoRetirada->setCMun($nfeMunicipioRetirada->getIbgeUf().$nfeMunicipioRetirada->getCodigo());
+                    $nfeIdentificacaoRetirada->setXMun($nfeMunicipioRetirada->getNome());
+                    $estadoRetirada = Mage::getModel('directory/region')->load($postData['retirada']['region_id']);
+                    $nfeIdentificacaoRetirada->setRegionId($estadoRetirada->getRegionId());
+                    $nfeIdentificacaoRetirada->setUf($estadoRetirada->getCode());
+                    $nfeIdentificacaoRetirada->setCep(preg_replace('/[^\d]/', '', $postData['retirada']['cep']));
+                    $nfeIdentificacaoRetirada->setCPais('1058');
+                    $nfeIdentificacaoRetirada->setXPais('Brasil');
+                    $nfeIdentificacaoRetirada->setFone(preg_replace('/[^\d]/', '', $postData['retirada']['fone']));
+                    $nfeIdentificacaoRetirada->save();
+                    $model->setTemRetirada('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['tem_entrega'])) {
+                    $nfeIdentificacaoEntrega = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('tipo_identificacao', array('eq' => 'entrega'))
+                                ->getFirstItem();
+                    $identificacaoIdEntrega = $nfeIdentificacaoEntrega->getIdentificacaoId();
+                    $nfeIdentificacaoEntrega->setData($postData['entrega']);
+                    if($identificacaoIdEntrega) {
+                        $nfeIdentificacaoEntrega->setIdentificacaoId($identificacaoIdEntrega);
+                    }
+                    $nfeIdentificacaoEntrega->setNfeId($nfeId);
+                    if($postData['entrega']['cnpj']) {
+                        $nfeIdentificacaoEntrega->setCnpj(preg_replace('/[^\d]/', '', $postData['entrega']['cnpj']));
+                    }
+                    if($postData['entrega']['cpf']) {
+                        $nfeIdentificacaoEntrega->setCpf(preg_replace('/[^\d]/', '', $postData['entrega']['cpf']));
+                    }
+                    $nfeMunicipioEntrega = $validarCampos->getMunicipio($postData['entrega']['x_mun']);
+                    if(!$nfeMunicipioEntrega->getCodigo()) {
+                        $erro = true;
+                        $msgErro = utf8_encode('O Munícipio de entrega da NF-e não é válido.');
+                    }
+                    $nfeIdentificacaoEntrega->setCMun($nfeMunicipioEntrega->getIbgeUf().$nfeMunicipioEntrega->getCodigo());
+                    $nfeIdentificacaoEntrega->setXMun($nfeMunicipioEntrega->getNome());
+                    $estadoEntrega = Mage::getModel('directory/region')->load($postData['entrega']['region_id']);
+                    $nfeIdentificacaoEntrega->setRegionId($estadoEntrega->getRegionId());
+                    $nfeIdentificacaoEntrega->setUf($estadoEntrega->getCode());
+                    $nfeIdentificacaoEntrega->setCep(preg_replace('/[^\d]/', '', $postData['entrega']['cep']));
+                    $nfeIdentificacaoEntrega->setCPais('1058');
+                    $nfeIdentificacaoEntrega->setXPais('Brasil');
+                    $nfeIdentificacaoEntrega->setFone(preg_replace('/[^\d]/', '', $postData['entrega']['fone']));
+                    $nfeIdentificacaoEntrega->save();
+                    $model->setTemEntrega('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['tem_importacao'])) {
+                    $model->setTemImportacao('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['tem_exportacao'])) {
+                    $model->setTemExportacao('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['trans_volume'])) {
+                    $volumeCollection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'vol');
+                    foreach($volumeCollection as $volumeModel) {
+                        $volumeModel->delete();
+                    }
+                    $volumesArray = $postData['nfe']['trans_volume']['value'];
+                    $volumesArrayDelete = $postData['nfe']['trans_volume']['delete'];
+                    for($i=0; $i<count($volumesArray); $i++) {
+                        if($volumesArray['option_'.$i] && $volumesArrayDelete['option_'.$i] != '1') {
+                            $volume = Mage::getModel('nfe/nfetransporte');
+                            $volume->setNfeId($nfeId);
+                            $volume->setTipoInformacao('vol');
+                            $volume->setQVol($volumesArray['option_'.$i]['q_vol']);
+                            $volume->setEsp($volumesArray['option_'.$i]['esp']);
+                            $volume->setMarca($volumesArray['option_'.$i]['marca']);
+                            $volume->setNVol($volumesArray['option_'.$i]['n_vol']);
+                            $volume->setPesoL($volumesArray['option_'.$i]['peso_l']);
+                            $volume->setPesoB($volumesArray['option_'.$i]['peso_b']);
+                            $volume->save();
+                        }
+                    }
+                    $model->setTransTemVol('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['trans_lacre'])) {
+                    $lacreCollection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'lacres');
+                    foreach($lacreCollection as $lacreModel) {
+                        $lacreModel->delete();
+                    }
+                    $lacresArray = $postData['nfe']['trans_lacre']['value'];
+                    $lacresArrayDelete = $postData['nfe']['trans_lacre']['delete'];
+                    for($i=0; $i<count($volumesArray); $i++) {
+                        if($lacresArray['option_'.$i] && $lacresArrayDelete['option_'.$i] != '1') {
+                            $lacre = Mage::getModel('nfe/nfetransporte');
+                            $lacre->setNfeId($nfeId);
+                            $lacre->setTipoInformacao('lacres');
+                            $lacre->setNLacre($lacresArray['option_'.$i]['n_lacre']);
+                            $lacre->save();
+                        }
+                    }
+                    $model->setTransTemLacre('1');
+                    $model->save();
+                }
+                
+                if(isset($postData['nfe']['trans_reboque'])) {
+                    $reboqueCollection = Mage::getModel('nfe/nfetransporte')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->addFieldToFilter('tipo_informacao', 'reboque');
+                    foreach($reboqueCollection as $reboqueModel) {
+                        $reboqueModel->delete();
+                    }
+                    $reboquesArray = $postData['nfe']['trans_reboque']['value'];
+                    $reboquesArrayDelete = $postData['nfe']['trans_reboque']['delete'];
+                    for($i=0; $i<count($reboquesArray); $i++) {
+                        if($reboquesArray['option_'.$i] && $reboquesArrayDelete['option_'.$i] != '1') {
+                            $reboque = Mage::getModel('nfe/nfetransporte');
+                            $reboque->setNfeId($nfeId);
+                            $reboque->setTipoInformacao('reboque');
+                            $reboque->setPlaca($reboquesArray['option_'.$i]['placa']);
+                            $reboque->setUf($reboquesArray['option_'.$i]['uf']);
+                            $reboque->setRntc($reboquesArray['option_'.$i]['rntc']);
+                            $reboque->setVagao($reboquesArray['option_'.$i]['vagao']);
+                            $reboque->setBalsa($reboquesArray['option_'.$i]['balsa']);
+                            $reboque->save();
+                        }
+                    }
+                    $model->setTransTemReboque('1');
+                    $model->save();
+                }
+                
+                if($postData['nfe']['cob_n_fat']) {
+                    $cobrancaCollection = Mage::getModel('nfe/nfecobranca')->getCollection()->addFieldToFilter('nfe_id', $nfeId);
+                    foreach($cobrancaCollection as $cobrancaModel) {
+                        $cobrancaModel->delete();
+                    }
+                    $cobrancasArray = $postData['nfe']['cob_duplicata']['value'];
+                    $cobrancasArrayDelete = $postData['nfe']['cob_duplicata']['delete'];
+                    for($i=0; $i<count($cobrancasArray); $i++) {
+                        if($cobrancasArray['option_'.$i] && $cobrancasArrayDelete['option_'.$i] != '1') {
+                            $cobranca = Mage::getModel('nfe/nfecobranca');
+                            $cobranca->setNfeId($nfeId);
+                            $cobranca->setCob_n_dup($cobrancasArray['option_'.$i]['cob_n_dup']);
+                            $cobranca->setCob_d_venc($cobrancasArray['option_'.$i]['cob_d_venc']);
+                            $cobranca->setCob_v_dup($cobrancasArray['option_'.$i]['cob_v_dup']);
+                            $cobranca->save();
+                        }
+                    }
+                }
+                
+                $itensArray = $postData['itens']['value'];
+                $itensArrayDelete = $postData['itens']['delete'];
+                $nItem = 0;
+                for($i=0; $i<count($itensArray); $i++) {
+                    if($itensArray['option_'.$i]['produto'] && $itensArrayDelete['option_'.$i] != '1') {
+                        $nfeProduto = Mage::getModel('nfe/nfeproduto')->getCollection()
+                                ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                                ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']))
+                                ->getFirstItem();
+                        $nItem++;
+                        $productId = preg_replace('/[^\d]/', '', $itensArray['option_'.$i]['produto']);
+                        $produto = Mage::getModel('catalog/product')->load($productId);
+                        $nfeProduto->setNfeId($nfeId);
+                        $nfeProduto->setProduto($itensArray['option_'.$i]['produto']);
+                        $nfeProduto->setNItem($nItem);
+                        $nfeProduto->setCProd($produto->getSku());
+                        $nfeProduto->setCEan($itensArray['option_'.$i]['c_ean']);
+                        $nfeProduto->setNcm($itensArray['option_'.$i]['ncm']);
+                        $nfeProduto->setNve($itensArray['option_'.$i]['nve']);
+                        $nfeProduto->setExtipi($itensArray['option_'.$i]['extipi']);
+                        $nfeProduto->setCfop($itensArray['option_'.$i]['cfop']);
+                        $nfeProduto->setUCom($itensArray['option_'.$i]['u_com']);
+                        $nfeProduto->setXProd($itensArray['option_'.$i]['x_prod']);
+                        $nfeProduto->setQCom($itensArray['option_'.$i]['q_com']);
+                        $nfeProduto->setVUnCom($itensArray['option_'.$i]['v_un_com']);
+                        $nfeProduto->setVProd($itensArray['option_'.$i]['v_prod']);
+                        $nfeProduto->setCEanTrib($itensArray['option_'.$i]['c_ean_trib']);
+                        $nfeProduto->setUTrib($itensArray['option_'.$i]['u_trib']);
+                        $nfeProduto->setQTrib($itensArray['option_'.$i]['q_trib']);
+                        $nfeProduto->setVUnTrib($itensArray['option_'.$i]['v_un_trib']);
+                        $nfeProduto->setVFrete($itensArray['option_'.$i]['v_frete']);
+                        $nfeProduto->setVSeg($itensArray['option_'.$i]['v_seg']);
+                        $nfeProduto->setVDesc($itensArray['option_'.$i]['v_desc']);
+                        $nfeProduto->setVOutro($itensArray['option_'.$i]['v_outro']);
+                        if($itensArray['option_'.$i]['ind_tot'] == '1') {
+                            $nfeProduto->setIndTot('1');
+                        }
+                        $nfeProduto->setXPed($postData['nfe']['pedido_increment_id']);
+                        $nfeProduto->setNItemPed($nItem);
+                        $nfeProduto->setVTotTrib($itensArray['option_'.$i]['v_tot_trib']);
+                        $nfeProduto->setPDevol($itensArray['option_'.$i]['p_devol']);
+                        $nfeProduto->setVIpiDevol($itensArray['option_'.$i]['v_ipi_devol']);
+                        $nfeProduto->setInfAdProd($itensArray['option_'.$i]['inf_ad_prod']);
+                        $nfeProduto->save();
+                        $produtoId = $nfeProduto->getProdutoId();
+                        if($itensArray['option_'.$i]['produto_especifico'] != '') {
+                            $nfeProduto->setEhEspecifico('1');
+                            if($itensArray['option_'.$i]['produto_especifico'] == '1') {
+                                $nfeProdutoEspecifico = Mage::getModel('nfe/nfeprodutoespecifico')->getCollection()
+                                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                        ->addFieldToFilter('tipo_especifico', array('eq' => 'veicProd'))
+                                        ->getFirstItem();
+                                $nfeProdutoEspecifico->setProdutoId($produtoId);
+                                $nfeProdutoEspecifico->setTipoEspecifico('veicProd');
+                                $nfeProdutoEspecifico->setTpOp($itensArray['option_'.$i]['tp_op']);
+                                $nfeProdutoEspecifico->setChassi($itensArray['option_'.$i]['chassi']);
+                                $nfeProdutoEspecifico->setCCor($itensArray['option_'.$i]['c_cor']);
+                                $nfeProdutoEspecifico->setXCor($itensArray['option_'.$i]['x_cor']);
+                                $nfeProdutoEspecifico->setPot($itensArray['option_'.$i]['pot']);
+                                $nfeProdutoEspecifico->setCilin($itensArray['option_'.$i]['cilin']);
+                                $nfeProdutoEspecifico->setPesoL($itensArray['option_'.$i]['peso_l']);
+                                $nfeProdutoEspecifico->setPesoB($itensArray['option_'.$i]['peso_b']);
+                                $nfeProdutoEspecifico->setNSerie($itensArray['option_'.$i]['n_serie']);
+                                $nfeProdutoEspecifico->setTpComb($itensArray['option_'.$i]['tp_comb']);
+                                $nfeProdutoEspecifico->setNMotor($itensArray['option_'.$i]['n_motor']);
+                                $nfeProdutoEspecifico->setCmt($itensArray['option_'.$i]['cmt']);
+                                $nfeProdutoEspecifico->setDist($itensArray['option_'.$i]['dist']);
+                                $nfeProdutoEspecifico->setAnoMod($itensArray['option_'.$i]['ano_mod']);
+                                $nfeProdutoEspecifico->setAnoFab($itensArray['option_'.$i]['ano_fab']);
+                                $nfeProdutoEspecifico->setTpPint($itensArray['option_'.$i]['tp_pint']);
+                                $nfeProdutoEspecifico->setTpVeic($itensArray['option_'.$i]['tp_veic']);
+                                $nfeProdutoEspecifico->setEspVeic($itensArray['option_'.$i]['esp_veic']);
+                                $nfeProdutoEspecifico->setVin($itensArray['option_'.$i]['vin']);
+                                $nfeProdutoEspecifico->setCondVeic($itensArray['option_'.$i]['cond_veic']);
+                                $nfeProdutoEspecifico->setCMod($itensArray['option_'.$i]['c_mod']);
+                                $nfeProdutoEspecifico->setCCorDenatran($itensArray['option_'.$i]['c_cor_denatran']);
+                                $nfeProdutoEspecifico->setLota($itensArray['option_'.$i]['lota']);
+                                $nfeProdutoEspecifico->setTpRest($itensArray['option_'.$i]['tp_rest']);
+                                $nfeProdutoEspecifico->save();
+                            }
+                            if($itensArray['option_'.$i]['produto_especifico'] == '2') {
+                                $nfeProdutoEspecifico = Mage::getModel('nfe/nfeprodutoespecifico')->getCollection()
+                                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                        ->addFieldToFilter('tipo_especifico', array('eq' => 'med'))
+                                        ->getFirstItem();
+                                $nfeProdutoEspecifico->setProdutoId($produtoId);
+                                $nfeProdutoEspecifico->setTipoEspecifico('med');
+                                $nfeProdutoEspecifico->setNLote($itensArray['option_'.$i]['n_lote']);
+                                $nfeProdutoEspecifico->setQLote($itensArray['option_'.$i]['q_lote']);
+                                $nfeProdutoEspecifico->setDFab($itensArray['option_'.$i]['d_fab']);
+                                $nfeProdutoEspecifico->setDVal($itensArray['option_'.$i]['d_val']);
+                                $nfeProdutoEspecifico->setNLote($itensArray['option_'.$i]['n_lote']);
+                                $nfeProdutoEspecifico->setVPmc($itensArray['option_'.$i]['v_pmc']);
+                                $nfeProdutoEspecifico->save();
+                            }
+                            if($itensArray['option_'.$i]['produto_especifico'] == '3') {
+                                $nfeProdutoEspecifico = Mage::getModel('nfe/nfeprodutoespecifico')->getCollection()
+                                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                        ->addFieldToFilter('tipo_especifico', array('eq' => 'arma'))
+                                        ->getFirstItem();
+                                $nfeProdutoEspecifico->setProdutoId($produtoId);
+                                $nfeProdutoEspecifico->setTipoEspecifico('arma');
+                                $nfeProdutoEspecifico->setTpArma($itensArray['option_'.$i]['tp_arma']);
+                                $nfeProdutoEspecifico->setNSerie($itensArray['option_'.$i]['arma_n_serie']);
+                                $nfeProdutoEspecifico->setNCano($itensArray['option_'.$i]['n_cano']);
+                                $nfeProdutoEspecifico->setDesc($itensArray['option_'.$i]['desc']);
+                                $nfeProdutoEspecifico->save();
+                            }
+                            if($itensArray['option_'.$i]['produto_especifico'] == '4') {
+                                $nfeProdutoEspecifico = Mage::getModel('nfe/nfeprodutoespecifico')->getCollection()
+                                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                        ->addFieldToFilter('tipo_especifico', array('eq' => 'comb'))
+                                        ->getFirstItem();
+                                $nfeProdutoEspecifico->setProdutoId($produtoId);
+                                $nfeProdutoEspecifico->setTipoEspecifico('comb');
+                                $nfeProdutoEspecifico->setCProdAnp($itensArray['option_'.$i]['c_prod_anp']);
+                                $nfeProdutoEspecifico->setPMixGn($itensArray['option_'.$i]['p_mix_gn']);
+                                $nfeProdutoEspecifico->setCodif($itensArray['option_'.$i]['codif']);
+                                $nfeProdutoEspecifico->setQTemp($itensArray['option_'.$i]['q_temp']);
+                                $nfeProdutoEspecifico->setUfCons($itensArray['option_'.$i]['uf_cons']);
+                                $nfeProdutoEspecifico->setQBcProd($itensArray['option_'.$i]['q_bc_prod']);
+                                $nfeProdutoEspecifico->setVAliqProd($itensArray['option_'.$i]['v_aliq_prod']);
+                                $nfeProdutoEspecifico->setVCide($itensArray['option_'.$i]['v_cide']);
+                                $nfeProdutoEspecifico->save();
+                            }
+                        }
+                        if($itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cst'] != '' || $itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cso_sn'] != '') {
+                            $nfeProduto->setTemIcms('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('icms'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('icms');
+                            if($itensArray['option_'.$i]['cst'] != '') {
+                                $nfeProdutoImposto->setCst($itensArray['option_'.$i]['cst']);
+                            }
+                            if($itensArray['option_'.$i]['cso_sn'] != '') {
+                                $nfeProdutoImposto->setCsoSn($itensArray['option_'.$i]['cso_sn']);
+                            }
+                            $nfeProdutoImposto->setOrig($itensArray['option_'.$i]['orig']);
+                            $nfeProdutoImposto->setModBc($itensArray['option_'.$i]['mod_bc']);
+                            $nfeProdutoImposto->setVBc($itensArray['option_'.$i]['v_bc']);
+                            $nfeProdutoImposto->setPIcms($itensArray['option_'.$i]['p_icms']);
+                            $nfeProdutoImposto->setVIcms($itensArray['option_'.$i]['v_icms']);
+                            $nfeProdutoImposto->setPRedBc($itensArray['option_'.$i]['p_red_bc']);
+                            $nfeProdutoImposto->setPMvaSt($itensArray['option_'.$i]['p_mva_st']);
+                            $nfeProdutoImposto->setModBcSt($itensArray['option_'.$i]['mod_bc_st']);
+                            $nfeProdutoImposto->setVBcSt($itensArray['option_'.$i]['v_bc_st']);
+                            $nfeProdutoImposto->setPIcmsSt($itensArray['option_'.$i]['p_icms_st']);
+                            $nfeProdutoImposto->setVIcmsSt($itensArray['option_'.$i]['v_icms_st']);
+                            $nfeProdutoImposto->setPRedBcSt($itensArray['option_'.$i]['p_red_bc_st']);
+                            $nfeProdutoImposto->setVIcmsDeson($itensArray['option_'.$i]['v_icms_deson']);
+                            $nfeProdutoImposto->setMotDesIcms($itensArray['option_'.$i]['mot_des_icms']);
+                            $nfeProdutoImposto->setVIcmsOp($itensArray['option_'.$i]['v_icms_op']);
+                            $nfeProdutoImposto->setPDif($itensArray['option_'.$i]['p_dif']);
+                            $nfeProdutoImposto->setVIcmsDif($itensArray['option_'.$i]['v_icms_dif']);
+                            $nfeProdutoImposto->setVBcstRet($itensArray['option_'.$i]['v_bcst_ret']);
+                            $nfeProdutoImposto->setVIcmsStRet($itensArray['option_'.$i]['v_icms_st_ret']);
+                            $nfeProdutoImposto->setPBcOp($itensArray['option_'.$i]['p_bc_op']);
+                            $nfeProdutoImposto->setUfSt($itensArray['option_'.$i]['uf_st']);
+                            $nfeProdutoImposto->setVBcStDest($itensArray['option_'.$i]['v_bc_st_dest']);
+                            $nfeProdutoImposto->setVIcmsStDest($itensArray['option_'.$i]['v_icms_st_dest']);
+                            $nfeProdutoImposto->setPCredSn($itensArray['option_'.$i]['p_cred_sn']);
+                            $nfeProdutoImposto->setVCredIcmsSn($itensArray['option_'.$i]['v_cred_icms_sn']);
+                            $nfeProdutoImposto->save();
+                        } else if($itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cst'] == '' || $itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cso_sn'] == '') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem CST/CSOSN e portanto está NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['pis_cst'] != '') {
+                            $nfeProduto->setTemPis('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('pis'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('pis');
+                            $nfeProdutoImposto->setCst($itensArray['option_'.$i]['pis_cst']);
+                            $nfeProdutoImposto->setVBc($itensArray['option_'.$i]['pis_v_bc']);
+                            $nfeProdutoImposto->setPPis($itensArray['option_'.$i]['p_pis']);
+                            $nfeProdutoImposto->setVAliqProd($itensArray['option_'.$i]['pis_v_aliq_prod']);
+                            $nfeProdutoImposto->setQBcProd($itensArray['option_'.$i]['pis_q_bc_prod']);
+                            $nfeProdutoImposto->setVPis($itensArray['option_'.$i]['v_pis']);
+                            $nfeProdutoImposto->save();
+                        } else {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais produtos não possuem CST de PIS e sendo assim a NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['cofins_cst'] != '') {
+                            $nfeProduto->setTemCofins('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('cofins'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('cofins');
+                            $nfeProdutoImposto->setCst($itensArray['option_'.$i]['cofins_cst']);
+                            $nfeProdutoImposto->setVBc($itensArray['option_'.$i]['cofins_v_bc']);
+                            $nfeProdutoImposto->setPCofins($itensArray['option_'.$i]['p_cofins']);
+                            $nfeProdutoImposto->setVAliqProd($itensArray['option_'.$i]['cofins_v_aliq_prod']);
+                            $nfeProdutoImposto->setQBcProd($itensArray['option_'.$i]['cofins_q_bc_prod']);
+                            $nfeProdutoImposto->setVCofins($itensArray['option_'.$i]['v_cofins']);
+                            $nfeProdutoImposto->save();
+                        } else {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais produtos não possuem CST de COFINS e sendo assim a NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['ipi_cst'] != '') {
+                            $nfeProduto->setTemIpi('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('ipi'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('ipi');
+                            $nfeProdutoImposto->setCst($itensArray['option_'.$i]['ipi_cst']);
+                            $nfeProdutoImposto->setClEnq($itensArray['option_'.$i]['cl_enq']);
+                            $nfeProdutoImposto->setCEnq($itensArray['option_'.$i]['c_enq']);
+                            $nfeProdutoImposto->setCSelo($itensArray['option_'.$i]['c_selo']);
+                            $nfeProdutoImposto->setQSelo($itensArray['option_'.$i]['q_selo']);
+                            $nfeProdutoImposto->setCnpjProd(preg_replace('/[^\d]/', '', $itensArray['option_'.$i]['cnpj_prod']));
+                            $nfeProdutoImposto->setVBc($itensArray['option_'.$i]['ipi_v_bc']);
+                            $nfeProdutoImposto->setPIpi($itensArray['option_'.$i]['p_ipi']);
+                            $nfeProdutoImposto->setQUnid($itensArray['option_'.$i]['q_unid']);
+                            $nfeProdutoImposto->setVUnid($itensArray['option_'.$i]['v_unid']);
+                            $nfeProdutoImposto->setVIpi($itensArray['option_'.$i]['v_ipi']);
+                            $nfeProdutoImposto->save();
+                        } else if($itensArray['option_'.$i]['ipi_cst'] != '' && $itensArray['option_'.$i]['operacao'] == '1') {
+                            $erro = true;
+                            $msgErro = utf8_encode('Um ou mais produtos não possuem CST de IPI e sendo assim a NF-e não é válida.');
+                        }
+                        if($itensArray['option_'.$i]['operacao'] == '2') {
+                            $nfeProduto->setTemIssqn('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('issqn'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('issqn');
+                            $nfeProdutoImposto->setVBc($itensArray['option_'.$i]['issqn_v_bc']);
+                            $nfeProdutoImposto->setVAliq($itensArray['option_'.$i]['v_aliq']);
+                            $nfeProdutoImposto->setVIssqn($itensArray['option_'.$i]['v_issqn']);
+                            if($itensArray['option_'.$i]['municipio_issqn'] != '') {
+                                $issqnMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_issqn']);
+                                if(!$issqnMunicipio->getCodigo()) {
+                                    $erro = true;
+                                    $msgErro = utf8_encode('O Munícipio de ocorrência da ISSQN da NF-e não é válido.');
+                                }
+                                $nfeProdutoImposto->setMunicipioIssqn($issqnMunicipio->getNome());
+                            }
+                            $nfeProdutoImposto->setCListServ($itensArray['option_'.$i]['c_list_serv']);
+                            $nfeProdutoImposto->setVDeducao($itensArray['option_'.$i]['v_deducao']);
+                            $nfeProdutoImposto->setVOutro($itensArray['option_'.$i]['issqn_v_outro']);
+                            $nfeProdutoImposto->setVDescIncond($itensArray['option_'.$i]['v_desc_incond']);
+                            $nfeProdutoImposto->setVDescCond($itensArray['option_'.$i]['v_desc_cond']);
+                            $nfeProdutoImposto->setVDescIncond($itensArray['option_'.$i]['v_desc_incond']);
+                            $nfeProdutoImposto->setVIssRet($itensArray['option_'.$i]['v_iss_ret']);
+                            $nfeProdutoImposto->setIndIss($itensArray['option_'.$i]['ind_iss']);
+                            $nfeProdutoImposto->setCServico($itensArray['option_'.$i]['c_servico']);
+                            if($itensArray['option_'.$i]['municipio_incidencia'] != '') {
+                                $incidenciaMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_incidencia']);
+                                if(!$incidenciaMunicipio->getCodigo()) {
+                                    $erro = true;
+                                    $msgErro = utf8_encode('O Munícipio de incidência da ISSQN da NF-e não é válido.');
+                                }
+                                $nfeProdutoImposto->setMunicipioIncidencia($incidenciaMunicipio->getNome());
+                            }
+                            $nfeProdutoImposto->setNProcesso($itensArray['option_'.$i]['n_processo']);
+                            $nfeProdutoImposto->setIndIncentivo($itensArray['option_'.$i]['ind_incentivo']);
+                            $nfeProdutoImposto->save();
+                        }
+                        if(isset($postData['nfe']['tem_exportacao'])) {
+                            $nfeProdutoExportacao = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_operacao', array('exportacao'))
+                                    ->getFirstItem();
+                            $nfeProdutoExportacao->setProdutoId($produtoId);
+                            $nfeProdutoExportacao->setTipoOperacao('exportacao');
+                            $nfeProdutoExportacao->setNDraw($itensArray['option_'.$i]['n_draw']);
+                            $nfeProdutoExportacao->setNRe($itensArray['option_'.$i]['n_re']);
+                            $nfeProdutoExportacao->setChNfe($itensArray['option_'.$i]['ch_nfe']);
+                            $nfeProdutoExportacao->setQExport($itensArray['option_'.$i]['q_export']);
+                            $nfeProdutoExportacao->save();
+                        }
+                        if(isset($postData['nfe']['tem_importacao'])) {
+                            $nfeProduto->setTemDi('1');
+                            $nfeProduto->setTemIi('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('ii'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('ii');
+                            $nfeProdutoImposto->setIi_v_bc($itensArray['option_'.$i]['ii_v_bc']);
+                            $nfeProdutoImposto->setVDespAdu($itensArray['option_'.$i]['v_desp_adu']);
+                            $nfeProdutoImposto->setVIi($itensArray['option_'.$i]['v_II']);
+                            $nfeProdutoImposto->setVIof($itensArray['option_'.$i]['v_iof']);
+                            $nfeProdutoImposto->save();
+                            $nfeProdutoImportacao = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_operacao', array('importacao'))
+                                    ->getFirstItem();
+                            $nfeProdutoImportacao->setProdutoId($produtoId);
+                            $nfeProdutoImportacao->setTipoOperacao('importacao');
+                            $nfeProdutoImportacao->setNDi($itensArray['option_'.$i]['n_di']);
+                            $nfeProdutoImportacao->setDDi($itensArray['option_'.$i]['d_di']);
+                            $nfeProdutoImportacao->setXLocDesemb($itensArray['option_'.$i]['x_loc_desemb']);
+                            $nfeProdutoImportacao->setUfDesemb($itensArray['option_'.$i]['uf_desemb']);
+                            $nfeProdutoImportacao->setDDesemb($itensArray['option_'.$i]['d_desemb']);
+                            $nfeProdutoImportacao->setTpViaTransp($itensArray['option_'.$i]['tp_via_transp']);
+                            $nfeProdutoImportacao->setAfrmm($itensArray['option_'.$i]['v_afrmm']);
+                            $nfeProdutoImportacao->setTpIntermedio($itensArray['option_'.$i]['tp_intermedio']);
+                            $nfeProdutoImportacao->setCnpj(preg_replace('/[^\d]/', '', $itensArray['option_'.$i]['cnpj']));
+                            $nfeProdutoImportacao->setUfTerceiro($itensArray['option_'.$i]['uf_terceiro']);
+                            $nfeProdutoImportacao->setCExportador($itensArray['option_'.$i]['c_exportador']);
+                            $nfeProdutoImportacao->setNAdicao($itensArray['option_'.$i]['n_adicao']);
+                            $nfeProdutoImportacao->setNSeqAdic($itensArray['option_'.$i]['n_seq_adic']);
+                            $nfeProdutoImportacao->setCFabricante($itensArray['option_'.$i]['c_fabricante']);
+                            $nfeProdutoImportacao->setVDescDi($itensArray['option_'.$i]['v_desc_di']);
+                            $nfeProdutoImportacao->setNDraw($itensArray['option_'.$i]['n_draw']);
+                            $nfeProdutoImportacao->save();
+                        }
+                        $nfeProduto->save();
+                        $produtosMovimento[] = $itensArray['option_'.$i]['produto'];
+                    }
+                }
+                if($nItem == 0) {
+                    $erro = true;
+                    $msgErro = utf8_encode('Não foram constatadas a presença de itens e portanto está NF-e não é válida.');
+                }
+                $nfeRN->confirmarItensNfe($nfeId, $produtosMovimento);
+                if(!$erro) {
+                    $xmlGerado = $nfeRN->gerarXml($nfeId);
+                    if($xmlGerado) {
+                        Mage::getSingleton('adminhtml/session')->addSuccess($this->__('A NF-e foi salva com sucesso.'));
+                        $model->setStatus('1');
+                        $model->setMensagem(utf8_encode('Aguardando envio ao orgão responsável.'));
+                        $model->save();
+                    }
+                    if ($this->getRequest()->getParam('back')) {
+                        $this->_redirect('*/*/edit', array('id' => $model->getId()));
+                        return;
+                    }
+                    $this->_redirect('*/*/');
+                    return;
+                } else {
+                    Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era salva. '.$msgErro));
+                    $model->setStatus('0');
+                    $model->setMensagem($msgErro);
+                    $model->save();
+                    $this->_redirect('*/*/');
+                    return;
+                }
+            } catch (Mage_Core_Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era salva. '.$e->getMessage()));
+            }
+            Mage::getSingleton('adminhtml/session')->setNfeData($postData);
+            $this->_redirectReferer();
+        }
+    }
+    
     public function gerarNfeAction() {
         $orderId = $this->getRequest()->getParam('order_id');
         if ($orderId) {
@@ -113,6 +945,18 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             $this->_getSession()->addSuccess($this->__('%s solicita&ccedil;&otilde;es de pedido(s) para emiss&atilde;o de NF-e gerada(s) com sucesso.', $countNfeOrder));
         }
         $this->_redirect('*/sales_order/');
+    }
+    
+    public function buscarProdutoAction() {
+        $produtoId = (string) $this->getRequest()->getParam('produto');
+        $product = Mage::getModel('catalog/product')->load($produtoId);
+        $result = array();
+        $result['x_prod'] = $product->getName();
+        $result['gtin'] = ($product->getData('gtin') ? $product->getData('gtin') : '');
+        $result['ncm'] = ($product->getAttributeText('ncm') ? $product->getAttributeText('ncm') : '');
+        $result['unidade'] = ($product->getAttributeText('unidade') ? $product->getAttributeText('unidade') : '');
+        
+        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($result));
     }
     
     protected function _isAllowed() {
@@ -231,6 +1075,81 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $html .= '</div>';
         
         $this->getResponse()->setBody($html);
+    }
+    
+    public function municipiosSearchAction() {
+        $query = $this->getRequest()->getParam('query', '');
+        $municipios = Mage::getModel('nfe/nfemunicipio')->getCollection()->addFieldToFilter('nome', array('like'=>$query));
+        if($municipios->getSize() <> 1) {
+            $municipios = Mage::getModel('nfe/nfemunicipio')->getCollection()->addFieldToFilter('nome', array('like'=>$query.'%'));
+        }
+        
+        $resultado = array();
+        foreach($municipios as $municipio) {
+            $resultado[] = array(
+                'id' => $municipio->getMunicipioId(),
+                'type' => $municipio->getMunicipioId(),
+                'name' => $municipio->getNome(),
+                'description' => utf8_encode('Código IBGE: '.$municipio->getIbgeUf().$municipio->getCodigo())
+            );
+        }
+        $totalCount = sizeof($resultado);
+        
+        $block = $this->getLayout()->createBlock('adminhtml/template')
+            ->setTemplate('iterator_nfe/autocomplete.phtml')
+            ->assign('municipios', $resultado);
+        
+        $this->getResponse()->setBody($block->toHtml());
+    }
+    
+    public function validarMunicipioAction() {
+        $municipio = $this->getRequest()->getParam('municipio');
+        $validarCampos = Mage::helper('nfe/ValidarCampos');
+        $result = array();
+        $nfeMunicipio = $validarCampos->getMunicipio($municipio);
+        if(!$nfeMunicipio->getCodigo()) {
+            $result['resultado'] = 'false';
+        } else {
+            $result['resultado'] = 'true';
+        }
+        $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($result));
+    }
+    
+    private function setEmitenteInfos($nfeIdentificacaoEmitente) {
+        $cnpj = preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj'));
+        $cMunFG = Mage::getStoreConfig('nfe/emitente_opcoes/codigo_municipio');
+        $crt = Mage::getStoreConfig('nfe/emitente_opcoes/crt');
+        $razaoSocial = Mage::getStoreConfig('nfe/emitente_opcoes/razao');
+        $nomeFantasia = Mage::getStoreConfig('nfe/emitente_opcoes/fantasia');
+        $logradouro = Mage::getStoreConfig('nfe/emitente_opcoes/logradouro');
+        $numero = Mage::getStoreConfig('nfe/emitente_opcoes/numero');
+        $complemento = Mage::getStoreConfig('nfe/emitente_opcoes/complemento');
+        $bairro = Mage::getStoreConfig('nfe/emitente_opcoes/bairro');
+        $cep = preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cep'));
+        $telefone = preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/fone'));
+        $ie = preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/ie'));
+        $nomeMunicipio = Mage::getStoreConfig('nfe/emitente_opcoes/nome_municipio');
+        $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+        
+        $nfeIdentificacaoEmitente->setTipoIdentificacao('emit');
+        $nfeIdentificacaoEmitente->setTipoPessoa(2);
+        $nfeIdentificacaoEmitente->setCnpj($cnpj);
+        $nfeIdentificacaoEmitente->setXNome($razaoSocial);
+        $nfeIdentificacaoEmitente->setXFant($nomeFantasia);
+        $nfeIdentificacaoEmitente->setXLgr($logradouro);
+        $nfeIdentificacaoEmitente->setNro($numero);
+        $nfeIdentificacaoEmitente->setXCpl($complemento);
+        $nfeIdentificacaoEmitente->setXBairro($bairro);
+        $nfeIdentificacaoEmitente->setCMun($cMunFG);
+        $nfeIdentificacaoEmitente->setXMun($nomeMunicipio);
+        $nfeIdentificacaoEmitente->setRegionId($estadoEmitente->getRegionId());
+        $nfeIdentificacaoEmitente->setUf($estadoEmitente->getCode());
+        $nfeIdentificacaoEmitente->setCep($cep);
+        $nfeIdentificacaoEmitente->setCPais('1058');
+        $nfeIdentificacaoEmitente->setXPais('Brasil');
+        $nfeIdentificacaoEmitente->setFone($telefone);
+        $nfeIdentificacaoEmitente->setIe($ie);
+        $nfeIdentificacaoEmitente->setCrt($crt);    
     }
 }
 
