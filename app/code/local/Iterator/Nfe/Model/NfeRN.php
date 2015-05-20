@@ -506,17 +506,682 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     public function gerarXML($nfeId) {
         // M�TODOS QUE SER�O UTILIZADOS NO MOMENTO DA GERA��O DO XML. BOT�O NO FORM DE CONFIRMA��O INVOCAR� O SAVE DO CONTROLLER DA NFE QUE DEPOIS INVOCAR� ESTES M�TODOS.
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
-        $this->preencherCampos($nfeCriarXML);
+        $this->preencherCampos($nfeId, $nfeCriarXML);
         $this->gerarArquivoXML($nfeCriarXML);
         // O diret�rio onde s�o salvos os XML n�o poder� ser manipulado e portanto n�o existir� como op��o nas configura��es, ser� fixo como "nfe" na ra�z do Magento por exemplo e cada pacote ser� referenciado por: "ID_N�meroNota"
         return true;
     }
     
-    private function preencherCampos($nfeCriarXML) {
+    private function preencherCampos($nfeId, $nfeCriarXML) {
+        // NF-e
+        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+        //Numero e versão da NFe (infNFe)
+        $chave = $nfe->getIdTag();
+        $versao = $nfe->getVersao();
+        $resposta = $nfeCriarXML->taginfNFe($chave, $versao);
+
+        //Dados da NFe (ide)
+        $cUF = $nfe->getCUf();
+        $cNF = $nfe->getCNf(); //numero aleatório da NF
+        $natOp = $nfe->getNatOp(); //natureza da operação
+        $indPag = $nfe->getIndPag(); //0=Pagamento à vista; 1=Pagamento a prazo; 2=Outros
+        $mod = $nfe->getMod(); //modelo da NFe 55 ou 65 essa última NFCe
+        $serie = $nfe->getSerie(); //serie da NFe
+        $nNF = $nfe->getNNf(); // numero da NFe
+        $dhEmi = str_replace(' ', 'T', $nfe->getDhEmi()).'-03:00';  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
+        $dhSaiEnt = str_replace(' ', 'T', $nfe->getDhSaiEnt()).'-03:00'; //versão 2.00, 3.00 e 3.10
+        $tpNF = $nfe->getTpNf();
+        $idDest = $nfe->getIdDest(); //1=Operação interna; 2=Operação interestadual; 3=Operação com exterior.
+        $cMunFG = $nfe->getCMunFg();
+        $tpImp = $nfe->getTpImp(); //0=Sem geração de DANFE; 1=DANFE normal, Retrato; 2=DANFE normal, Paisagem;
+                      //3=DANFE Simplificado; 4=DANFE NFC-e; 5=DANFE NFC-e em mensagem eletrônica
+                      //(o envio de mensagem eletrônica pode ser feita de forma simultânea com a impressão do DANFE;
+                      //usar o tpImp=5 quando esta for a única forma de disponibilização do DANFE).
+        $tpEmis = $nfe->getTpEmis(); //1=Emissão normal (não em contingência);
+                       //2=Contingência FS-IA, com impressão do DANFE em formulário de segurança;
+                       //3=Contingência SCAN (Sistema de Contingência do Ambiente Nacional);
+                       //4=Contingência DPEC (Declaração Prévia da Emissão em Contingência);
+                       //5=Contingência FS-DA, com impressão do DANFE em formulário de segurança;
+                       //6=Contingência SVC-AN (SEFAZ Virtual de Contingência do AN);
+                       //7=Contingência SVC-RS (SEFAZ Virtual de Contingência do RS);
+                       //9=Contingência off-line da NFC-e (as demais opções de contingência são válidas também para a NFC-e);
+                       //Nota: Para a NFC-e somente estão disponíveis e são válidas as opções de contingência 5 e 9.
+        $cDV = $nfe->getCDv(); //digito verificador
+        $tpAmb = $nfe->getTpAmb(); //1=Produção; 2=Homologação
+        $finNFe = $nfe->getFinNfe(); //1=NF-e normal; 2=NF-e complementar; 3=NF-e de ajuste; 4=Devolução/Retorno.
+        $indFinal = $nfe->getIndFinal(); //0=Não; 1=Consumidor final;
+        $indPres = $nfe->getIndPres(); //0=Não se aplica (por exemplo, Nota Fiscal complementar ou de ajuste);
+                       //1=Operação presencial;
+                       //2=Operação não presencial, pela Internet;
+                       //3=Operação não presencial, Teleatendimento;
+                       //4=NFC-e em operação com entrega a domicílio;
+                       //9=Operação não presencial, outros.
+        $procEmi = $nfe->getProcEmi(); //0=Emissão de NF-e com aplicativo do contribuinte;
+                        //1=Emissão de NF-e avulsa pelo Fisco;
+                        //2=Emissão de NF-e avulsa, pelo contribuinte com seu certificado digital, através do site do Fisco;
+                        //3=Emissão NF-e pelo contribuinte com aplicativo fornecido pelo Fisco.
+        $verProc = $nfe->getVerProc(); //versão do aplicativo emissor
+        $dhCont = $nfe->getDhCont(); //entrada em contingência AAAA-MM-DDThh:mm:ssTZD
+        $xJust = $nfe->getXJust(); //Justificativa da entrada em contingência
+        $resposta = $nfeCriarXML->tagide($cUF, $cNF, $natOp, $indPag, $mod, $serie, $nNF, $dhEmi, $dhSaiEnt, $tpNF, $idDest, $cMunFG, $tpImp, $tpEmis, $cDV, $tpAmb, $finNFe, $indFinal, $indPres, $procEmi, $verProc, $dhCont, $xJust);
         
+        // Refer�ncia
+        if($nfe->getTemReferencia() == '1') {
+            $nfeReferenciado = Mage::getModel('nfe/nfereferenciado')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                    ->getFirstItem();
+            if($nfeReferenciado->getTipoDocumento() == 'refNFe') {
+                //refNFe NFe referenciada  
+                $refNFe = $nfeReferenciado->getRefNfe();
+                $resposta = $nfeCriarXML->tagrefNFe($refNFe);
+            } else if($nfeReferenciado->getTipoDocumento() == 'refNF') {
+                //refNF Nota Fiscal 1A referenciada
+                $cUF = $nfeReferenciado->getCUf();
+                $AAMM = $nfeReferenciado->getAamm();
+                $CNPJ = $nfeReferenciado->getCnpj();
+                $mod = $nfeReferenciado->getMod();
+                $serie = $nfeReferenciado->getSerie();
+                $nNF = $nfeReferenciado->getNNf();
+                $resposta = $nfeCriarXML->tagrefNF($cUF, $AAMM, $CNPJ, $mod, $serie, $nNF);
+            } else if($nfeReferenciado->getTipoDocumento() == 'refNFP') {
+                //NFPref Nota Fiscal Produtor Rural referenciada
+                $cUF = $nfeReferenciado->getCUf();
+                $AAMM = $nfeReferenciado->getAamm();
+                $CNPJ = $nfeReferenciado->getCnpj();
+                $CPF = $nfeReferenciado->getCpf();
+                $IE = $nfeReferenciado->getIe();
+                $mod = $nfeReferenciado->getMod();
+                $serie = $nfeReferenciado->getSerie();
+                $nNF = $nfeReferenciado->getNNf();
+                $resposta = $nfeCriarXML->tagrefNFP($cUF, $AAMM, $CNPJ, $CPF, $IE, $mod, $serie, $nNF);
+            } else if($nfeReferenciado->getTipoDocumento() == 'refECF') {
+                //ECFref ECF referenciada
+                $mod = $nfeReferenciado->getMod();
+                $nECF = $nfeReferenciado->getNEcf();
+                $nCOO = $nfeReferenciado->getCoo();
+                $resposta = $nfeCriarXML->tagrefECF($mod, $nECF, $nCOO);
+            }
+        }
+
+        // Emitente
+        $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'emit'))
+                    ->getFirstItem();
+        //Dados do emitente
+        $CNPJ = $nfeIdentificacaoEmitente->getCnpj();
+        $CPF = $nfeIdentificacaoEmitente->getCpf();
+        $xNome = $nfeIdentificacaoEmitente->getXNome();
+        $xFant = $nfeIdentificacaoEmitente->getXFant();
+        $IE = $nfeIdentificacaoEmitente->getIe();
+        $IEST = $nfeIdentificacaoEmitente->getIest();
+        $IM = $nfeIdentificacaoEmitente->getIm();
+        $CNAE = $nfeIdentificacaoEmitente->getCnae();
+        $CRT = $nfeIdentificacaoEmitente->getCrt();
+        $resposta = $nfeCriarXML->tagemit($CNPJ, $CPF, $xNome, $xFant, $IE, $IEST, $IM, $CNAE, $CRT);
+        //endereço do emitente
+        $xLgr = $nfeIdentificacaoEmitente->getXLgr();
+        $nro = $nfeIdentificacaoEmitente->getNro();
+        $xCpl = $nfeIdentificacaoEmitente->getXCpl();
+        $xBairro = $nfeIdentificacaoEmitente->getXBairro();
+        $cMun = $nfeIdentificacaoEmitente->getCMun();
+        $xMun = $nfeIdentificacaoEmitente->getXMun();
+        $UF = $nfeIdentificacaoEmitente->getUf();
+        $CEP = $nfeIdentificacaoEmitente->getCep();
+        $cPais = $nfeIdentificacaoEmitente->getCPais();
+        $xPais = $nfeIdentificacaoEmitente->getXPais();
+        $fone = $nfeIdentificacaoEmitente->getFone();
+        $resposta = $nfeCriarXML->tagenderEmit($xLgr, $nro, $xCpl, $xBairro, $cMun, $xMun, $UF, $CEP, $cPais, $xPais, $fone);
+        
+        // Destinat�rio
+        $nfeIdentificacaoDestinatario = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'dest'))
+                    ->getFirstItem();
+        //destinatário
+        $CNPJ = $nfeIdentificacaoDestinatario->getCnpj();
+        $CPF = $nfeIdentificacaoDestinatario->getCpf();
+        $idEstrangeiro = $nfeIdentificacaoDestinatario->getIdEstrangeiro;
+        $xNome = $nfeIdentificacaoDestinatario->getXNome();
+        $indIEDest = $nfeIdentificacaoDestinatario->getIndIeDest();
+        $IE = $nfeIdentificacaoDestinatario->getIe();
+        $ISUF = $nfeIdentificacaoDestinatario->getIsuf();
+        $IM = $nfeIdentificacaoDestinatario->getIm();
+        $email = $nfeIdentificacaoDestinatario->getEmail();
+        $resposta = $nfeCriarXML->tagdest($CNPJ, $CPF, $idEstrangeiro, $xNome, $indIEDest, $IE, $ISUF, $IM, $email);
+        //Endereço do destinatário
+        $xLgr = $nfeIdentificacaoDestinatario->getXLgr();
+        $nro = $nfeIdentificacaoDestinatario->getNro();
+        $xCpl = $nfeIdentificacaoDestinatario->getXCpl();
+        $xBairro = $nfeIdentificacaoDestinatario->getXBairro();
+        $cMun = $nfeIdentificacaoDestinatario->getCMun();
+        $xMun = $nfeIdentificacaoDestinatario->getXMun();
+        $UF = $nfeIdentificacaoDestinatario->getUf();
+        $CEP = $nfeIdentificacaoDestinatario->getCep();
+        $cPais = $nfeIdentificacaoDestinatario->getCPais();
+        $xPais = $nfeIdentificacaoDestinatario->getXPais;
+        $fone = $nfeIdentificacaoDestinatario->getFone();
+        $resposta = $nfeCriarXML->tagenderDest($xLgr, $nro, $xCpl, $xBairro, $cMun, $xMun, $UF, $CEP, $cPais, $xPais, $fone);
+        
+        // Retirada
+        if($nfe->getTemRetirada() == '1') {
+            $nfeIdentificacaoRetirada = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'retirada'))
+                    ->getFirstItem();
+            //Identificação do local de retirada (se diferente do emitente)
+            $CNPJ = $nfeIdentificacaoRetirada->getCnpj();
+            $CPF = $nfeIdentificacaoRetirada->getCpf();
+            $xLgr = $nfeIdentificacaoRetirada->getXLgr();
+            $nro = $nfeIdentificacaoRetirada->getNro();
+            $xCpl = $nfeIdentificacaoRetirada->getXCpl();
+            $xBairro = $nfeIdentificacaoRetirada->getXBairro();
+            $cMun = $nfeIdentificacaoRetirada->getCMun();
+            $xMun = $nfeIdentificacaoRetirada->getXMun();
+            $UF = $nfeIdentificacaoRetirada->getUf();
+            $resposta = $nfeCriarXML->tagretirada($CNPJ, $CPF, $xLgr, $nro, $xCpl, $xBairro, $cMun, $xMun, $UF);
+        }
+        
+        // Entrega
+        if($nfe->getTemEntrega() == '1') {
+            $nfeIdentificacaoEntrega = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'entrega'))
+                    ->getFirstItem();
+            $CNPJ = $nfeIdentificacaoEntrega->getCnpj();
+            $CPF = $nfeIdentificacaoEntrega->getCpf();
+            $xLgr = $nfeIdentificacaoEntrega->getXLgr();
+            $nro = $nfeIdentificacaoEntrega->getNro();
+            $xCpl = $nfeIdentificacaoEntrega->getXCpl();
+            $xBairro = $nfeIdentificacaoEntrega->getXBairo();
+            $cMun = $nfeIdentificacaoEntrega->getCMun();
+            $xMun = $nfeIdentificacaoEntrega->getXMun();
+            $UF = $nfeIdentificacaoEntrega->getUf();
+            $resposta = $nfeCriarXML->tagentrega($CNPJ, $CPF, $xLgr, $nro, $xCpl, $xBairro, $cMun, $xMun, $UF);
+        }
+        
+        /*
+         * N�o utilizar se for igual ao desinatario
+        //Identificação dos autorizados para fazer o download da NFe (somente versão 3.1)
+        $aAut = array('11111111111111','2222222','33333333333333');
+        foreach ($aAut as $aut) {
+            if (strlen($aut) == 14) {
+                $resp = $nfeCriarXML->tagautXML($aut);
+            } else {
+                $resp = $nfeCriarXML->tagautXML('', $aut);
+            }
+        }
+         * 
+         */
+        
+        // Produtos
+        $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()
+                ->addFieldToFilter('nfe_id', array('eq' => $nfeId));
+        foreach($nfeProdutos as $nfeProduto) {
+            $produtoId = $nfeProduto->getProdutoId();
+            $nItem = $nfeProduto->getNItem();
+            $cProd = $nfeProduto->getCProd();
+            $cEAN = $nfeProduto->getCEan();
+            $xProd = $nfeProduto->getXProd();
+            $NCM = $nfeProduto->getNcm();
+            $NVE = $nfeProduto->getNve();
+            $EXTIPI = $nfeProduto->getExtipi();
+            $CFOP = $nfeProduto->getCfop();
+            $uCom = $nfeProduto->getUCom();
+            $qCom = $nfeProduto->getQCom();
+            $vUnCom = $nfeProduto->getVUnCom();
+            $vProd = $nfeProduto->getVProd();
+            $cEANTrib = $nfeProduto->getCEanTrib();
+            $uTrib = $nfeProduto->getUTrib();
+            $qTrib = $nfeProduto->getQTrib();
+            $vUnTrib = $nfeProduto->getVUnTrib();
+            $vFrete = $nfeProduto->getVFrete();
+            $vSeg = $nfeProduto->getVSeg();
+            $vDesc = $nfeProduto->getVDesc();
+            $vOutro = $nfeProduto->getVOutro();
+            $indTot = $nfeProduto->getIndTot();
+            $xPed = $nfeProduto->getXPed();
+            $nItemPed = $nfeProduto->getNItemPed();
+            $nFCI = '';
+            $resposta = $nfeCriarXML->tagprod($nItem, $cProd, $cEAN, $xProd, $NCM, $NVE, $EXTIPI, $CFOP, $uCom, $qCom, $vUnCom, $vProd, $cEANTrib, $uTrib, $qTrib, $vUnTrib, $vFrete, $vSeg, $vDesc, $vOutro, $indTot, $xPed, $nItemPed, $nFCI);
+            // Produto Espec�fico
+            if($nfeProduto->getEhEspecifico() == '1') {
+                $nfeProdutoEspecifico = Mage::getModel('nfe/nfeprodutoespecifico')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->getFirstItem();
+                if($nfeProdutoEspecifico->getTipoEspecifico() == 'veicProd') {
+                    $tpOp = $nfeProdutoEspecifico->getTpOp();
+                    $chassi = $nfeProdutoEspecifico->getChassi();
+                    $cCor = $nfeProdutoEspecifico->getCCor();
+                    $xCor = $nfeProdutoEspecifico->getXCor();
+                    $pot = $nfeProdutoEspecifico->getPot();
+                    $cilin = $nfeProdutoEspecifico->getCilin();
+                    $pesoL = $nfeProdutoEspecifico->getPesoL();
+                    $pesoB = $nfeProdutoEspecifico->getPesoB();
+                    $nSerie = $nfeProdutoEspecifico->getNSerie();
+                    $tpComb = $nfeProdutoEspecifico->getTpComb();
+                    $nMotor = $nfeProdutoEspecifico->getNMotor();
+                    $cmt = $nfeProdutoEspecifico->getCmt();
+                    $dist = $nfeProdutoEspecifico->getDist();
+                    $anoMod = $nfeProdutoEspecifico->getAnoMod();
+                    $anoFab = $nfeProdutoEspecifico->getAnoFab();
+                    $tpPint = $nfeProdutoEspecifico->getTpPint();
+                    $tpVeic = $nfeProdutoEspecifico->getTpVeic();
+                    $espVeic = $nfeProdutoEspecifico->getEspVeic();
+                    $VIN = $nfeProdutoEspecifico->getVin();
+                    $condVeic = $nfeProdutoEspecifico->getCondVeic();
+                    $cMod = $nfeProdutoEspecifico->getCMod();
+                    $cCorDENATRAN = $nfeProdutoEspecifico->getCCorDenatran();
+                    $lota = $nfeProdutoEspecifico->getLota();
+                    $tpRest = $nfeProdutoEspecifico->getTpRest();
+                    $resposta = $nfeCriarXML->tagveicProd($nItem, $tpOp, $chassi, $cCor, $xCor, $pot, $cilin, $pesoL, $pesoB, $nSerie, $tpComb, $nMotor, $cmt, $dist, $anoMod, $anoFab, $tpPint, $tpVeic, $espVeic, $VIN, $condVeic, $cMod, $cCorDENATRAN, $lota, $tpRest);
+                } else if($nfeProdutoEspecifico->getTipoEspecifico() == 'med') {
+                    $nLote = $nfeProdutoEspecifico->getNLote();
+                    $qLote = $nfeProdutoEspecifico->getQLote();
+                    $dFab = $nfeProdutoEspecifico->getDFab();
+                    $dVal = $nfeProdutoEspecifico->getDVal();
+                    $vPMC = $nfeProdutoEspecifico->getVPmc();
+                    $resposta = $nfeCriarXML->tagmed($nItem, $nLote, $qLote, $dFab, $dVal, $vPMC);
+                } else if($nfeProdutoEspecifico->getTipoEspecifico() == 'arma') {
+                    $tpArma = $nfeProdutoEspecifico->getTpArma();
+                    $nSerie = $nfeProdutoEspecifico->getNSerie();
+                    $nCano = $nfeProdutoEspecifico->getNCano();
+                    $descr = $nfeProdutoEspecifico->getDesc();
+                    $resposta = $nfeCriarXML->tagarma($nItem, $tpArma, $nSerie, $nCano, $descr);
+                } else if($nfeProdutoEspecifico->getTipoEspecifico() == 'comb') {
+                    $cProdANP = $nfeProdutoEspecifico->getCProdAnp();
+                    $pMixGN = $nfeProdutoEspecifico->getPMixGn();
+                    $codif = $nfeProdutoEspecifico->getCodif();
+                    $qTemp = $nfeProdutoEspecifico->getqTemp();
+                    $ufCons = $nfeProdutoEspecifico->getufCons();
+                    $qBCProd = $nfeProdutoEspecifico->getQBcProd();
+                    $vAliqProd = $nfeProdutoEspecifico->getVAliqProd();
+                    $vCIDE = $nfeProdutoEspecifico->getVCide();
+                    $resposta = $nfeCriarXML->tagarma($nItem, $cProdANP, $pMixGN, $codif, $qTemp, $ufCons, $qBCProd, $vAliqProd, $vCIDE);
+                }
+            }
+            
+            if($nfe->getTemImportacao() == '1') {
+                $nfeProdutoImportacao = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_operacao', array('importacao'))
+                        ->getFirstItem();
+                //DI
+                $nDI = $nfeProdutoImportacao->getNDi();
+                $dDI = $nfeProdutoImportacao->getDDi();
+                $xLocDesemb = $nfeProdutoImportacao->getXLocDesemb();
+                $UFDesemb = $nfeProdutoImportacao->getUfDesemb();
+                $dDesemb = $nfeProdutoImportacao->getDDesemb();
+                $tpViaTransp = $nfeProdutoImportacao->getTpViaTransp();
+                $vAFRMM = $nfeProdutoImportacao->getVAfrmm();
+                $tpIntermedio = $nfeProdutoImportacao->getTpIntermedio();
+                $CNPJ = $nfeProdutoImportacao->getCnpj();
+                $UFTerceiro = $nfeProdutoImportacao->getUfTerceiro();
+                $cExportador = $nfeProdutoImportacao->getCExportador();
+                $resposta = $nfeCriarXML->tagDI($nItem, $nDI, $dDI, $xLocDesemb, $UFDesemb, $dDesemb, $tpViaTransp, $vAFRMM, $tpIntermedio, $CNPJ, $UFTerceiro, $cExportador);
+                //adi
+                $nDI = $nfeProdutoImportacao->getNDi();
+                $nAdicao = $nfeProdutoImportacao->getNAdicao();
+                $nSeqAdicC = $nfeProdutoImportacao->getNSeqAdic();
+                $cFabricante = $nfeProdutoImportacao->getCFabricante();
+                $vDescDI = $nfeProdutoImportacao->getVDescDi();
+                $nDraw = $nfeProdutoImportacao->getNDraw();
+                $resposta = $nfeCriarXML->tagadi($nItem, $nDI, $nAdicao, $nSeqAdicC, $cFabricante, $vDescDI, $nDraw);
+                //II
+                $nfeProdutoImpostoIi = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('ii'))
+                        ->getFirstItem();
+                $vBC = $nfeProdutoImpostoIi->getVBc();
+                $vDespAdu = $nfeProdutoImpostoIi->getVDespAdu();
+                $vII = $nfeProdutoImpostoIi->getVII();
+                $vIOF = $nfeProdutoImpostoIi->getVIof();
+                $resposta = $nfeCriarXML->tagII($nItem, $vBC, $vDespAdu, $vII, $vIOF);
+            }
+            
+            if($nfe->getTemExportacao() == '1') {
+                $nfeProdutoExportacao = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_operacao', array('exportacao'))
+                        ->getFirstItem();
+                //detExport
+                $nDraw = $nfeProdutoExportacao->getNDraw();
+                $exportInd = '1';
+                $nRE = $nfeProdutoExportacao->getNRe();
+                $chNFe = $nfeProdutoExportacao->getChNfe();
+                $qExport = $nfeProdutoExportacao->getQExport();
+                $resposta = $nfeCriarXML->tagdetExport($nItem, $nDraw, $exportInd, $nRE, $chNFe, $qExport);
+            }
+            
+            //imposto
+            $vTotTrib = $nfeProduto->getVTotTrib();
+            $resposta = $nfeCriarXML->tagimposto($nItem, $vTotTrib);
+            
+            // Produto ICMS
+            if($nfeProduto->getTemIcms() == '1') {
+                $nfeProdutoImpostoIcms = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('icms'))
+                        ->getFirstItem();
+                if($nfeProdutoImpostoIcms->getCst()) {
+                    $orig = $nfeProdutoImpostoIcms->getOrig();
+                    $cst = $nfeProdutoImpostoIcms->getCst();
+                    $modBC = $nfeProdutoImpostoIcms->getModBc();
+                    $pRedBC = $nfeProdutoImpostoIcms->getPRedBc();
+                    $vBC = $nfeProdutoImpostoIcms->getVBc();
+                    $pICMS = $nfeProdutoImpostoIcms->getPIcms();
+                    $vICMS = $nfeProdutoImpostoIcms->getVIcms();
+                    $vICMSDeson = $nfeProdutoImpostoIcms->getVIcmsDeson();
+                    $motDesICMS = $nfeProdutoImpostoIcms->getMotDesIcms();
+                    $modBCST = $nfeProdutoImpostoIcms->getModBcSt();
+                    $pMVAST = $nfeProdutoImpostoIcms->getPMvaSt();
+                    $pRedBCST = $nfeProdutoImpostoIcms->getPRedBcSt();
+                    $vBCST = $nfeProdutoImpostoIcms->getVBcSt();
+                    $pICMSST = $nfeProdutoImpostoIcms->getPIcmsSt();
+                    $vICMSST = $nfeProdutoImpostoIcms->getVIcmsSt();
+                    $pDif = $nfeProdutoImpostoIcms->getPDif();
+                    $vICMSDif = $nfeProdutoImpostoIcms->getVIcmsDif();
+                    $vICMSOp = $nfeProdutoImpostoIcms->getVIcmsOp();
+                    $vBCSTRet = $nfeProdutoImpostoIcms->getVbcstRet();
+                    $vICMSSTRet = $nfeProdutoImpostoIcms->getVIcmsStRet();
+                    $resposta = $nfeCriarXML->tagICMS($nItem, $orig, $cst, $modBC, $pRedBC, $vBC, $pICMS, $vICMS, $vICMSDeson, $motDesICMS, $modBCST, $pMVAST, $pRedBCST, $vBCST, $pICMSST, $vICMSST, $pDif, $vICMSDif, $vICMSOp, $vBCSTRet, $vICMSSTRet);
+                } else if($nfeProdutoImpostoIcms->getCsoSn()) {
+                    $orig = $nfeProdutoImpostoIcms->getOrig();
+                    $csosn = $nfeProdutoImpostoIcms->getCsoSn();
+                    $modBC = $nfeProdutoImpostoIcms->getModBc();
+                    $pRedBC = $nfeProdutoImpostoIcms->getPRedBc();
+                    $vBC = $nfeProdutoImpostoIcms->getVBc();
+                    $pICMS = $nfeProdutoImpostoIcms->getPIcms();
+                    $vICMS = $nfeProdutoImpostoIcms->getVIcms();
+                    $pCredSN = $nfeProdutoImpostoIcms->getPCredSn();
+                    $vCredICMSSN = $nfeProdutoImpostoIcms->getVCredIcmsSn();
+                    $modBCST = $nfeProdutoImpostoIcms->getModBcSt();
+                    $pMVAST = $nfeProdutoImpostoIcms->getPMvaSt();
+                    $pRedBCST = $nfeProdutoImpostoIcms->getPRedBcSt();
+                    $vBCST = $nfeProdutoImpostoIcms->getVBcSt();
+                    $pICMSST = $nfeProdutoImpostoIcms->getPIcmsSt();
+                    $vICMSST = $nfeProdutoImpostoIcms->getVIcmsSt();
+                    $vBCSTRet = $nfeProdutoImpostoIcms->getVbcstRet();
+                    $vICMSSTRet = $nfeProdutoImpostoIcms->getVIcmsStRet(); 
+                    $resposta = $nfeCriarXML->tagICMSSN($nItem, $orig, $csosn, $modBC, $vBC, $pRedBC, $pICMS, $vICMS, $pCredSN, $vCredICMSSN, $modBCST, $pMVAST, $pRedBCST, $vBCST, $pICMSST, $vICMSST, $vBCSTRet, $vICMSSTRet);
+                }
+                //ICMSPart
+                //$resp = $nfe->tagICMSPart($nItem, $orig, $cst, $modBC, $vBC, $pRedBC, $pICMS, $vICMS, $modBCST, $pMVAST, $pRedBCST, $vBCST, $pICMSST, $vICMSST, $pBCOp, $ufST);
+                //ICMSST
+                //$resp = $nfe->tagICMSST($nItem, $orig, $cst, $vBCSTRet, $vICMSSTRet, $vBCSTDest, $vICMSSTDest);
+            }
+            
+            // Produto PIS
+            if($nfeProduto->getTemPis() == '1') {
+                $nfeProdutoImpostoPis = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('pis'))
+                        ->getFirstItem();
+                $cst = $nfeProdutoImpostoPis->getCst();
+                $vBC = $nfeProdutoImpostoPis->getVBc();
+                $pPIS = $nfeProdutoImpostoPis->getPPis();
+                $vPIS = $nfeProdutoImpostoPis->getVPis();
+                $qBCProd = $nfeProdutoImpostoPis->getQBcProd();
+                $vAliqProd = $nfeProdutoImpostoPis->getVAliqProd();
+                $resposta = $nfeCriarXML->tagPIS($nItem, $cst, $vBC, $pPIS, $vPIS, $qBCProd, $vAliqProd);
+            }
+            //PISST
+            //$resp = $nfe->tagPISST($nItem, $vBC, $pPIS, $qBCProd, $vAliqProd, $vPIS);
+            
+            // Produto COFINS
+            if($nfeProduto->getTemCofins() == '1') {
+                $nfeProdutoImpostoCofins = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('cofins'))
+                        ->getFirstItem();
+                $cst = $nfeProdutoImpostoCofins->getCst();
+                $vBC = $nfeProdutoImpostoCofins->getVBc();
+                $pCOFINS = $nfeProdutoImpostoCofins->getPCofins();
+                $vCOFINS = $nfeProdutoImpostoCofins->getVCofins();
+                $qBCProd = $nfeProdutoImpostoCofins->getQBcProd();
+                $vAliqProd = $nfeProdutoImpostoCofins->getVAliqProd();
+                $resposta = $nfeCriarXML->tagCOFINS($nItem, $cst, $vBC, $pCOFINS, $vCOFINS, $qBCProd, $vAliqProd);
+            }
+            //COFINSST
+            //$resp = $nfe->tagCOFINSST($nItem, $vBC, $pCOFINS, $qBCProd, $vAliqProd, $vCOFINS);
+            
+            // Produto IPI
+            if($nfeProduto->getTemIpi() == '1') {
+                $nfeProdutoImpostoIpi = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('ipi'))
+                        ->getFirstItem();
+                $cst = $nfeProdutoImpostoIpi->getCst();
+                $clEnq = $nfeProdutoImpostoIpi->getClEnq();
+                $cnpjProd = $nfeProdutoImpostoIpi->getCnpjProd();
+                $cSelo = $nfeProdutoImpostoIpi->getCSelo();
+                $qSelo = $nfeProdutoImpostoIpi->getQSelo();
+                $cEnq = $nfeProdutoImpostoIpi->getCEnq();
+                $vBC = $nfeProdutoImpostoIpi->getVBc();
+                $pIPI = $nfeProdutoImpostoIpi->getPIpi();
+                $qUnid = $nfeProdutoImpostoIpi->getQUnid();
+                $vUnid = $nfeProdutoImpostoIpi->getVUnid();
+                $vIPI = $nfeProdutoImpostoIpi->getVIpi();
+                $resposta = $nfeCriarXML->tagIPI($nItem, $cst, $clEnq, $cnpjProd, $cSelo, $qSelo, $cEnq, $vBC, $pIPI, $qUnid, $vUnid, $vIPI);
+            }
+            
+            // Produto ISSQN
+            if($nfeProduto->getTemIssqn() == '1') {
+                $nfeProdutoImpostoIssqn = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('issqn'))
+                        ->getFirstItem();
+                $vBC = $nfeProdutoImpostoIssqn->getVBc();
+                $vAliq = $nfeProdutoImpostoIssqn->getVAliq();
+                $vISSQN = $nfeProdutoImpostoIssqn->getVIssqn();
+                $cMunFG = $nfeProdutoImpostoIssqn->getCMunFg();
+                $cListServ = $nfeProdutoImpostoIssqn->getCListServ();
+                $vDeducao = $nfeProdutoImpostoIssqn->getVDeducao();
+                $vOutro = $nfeProdutoImpostoIssqn->getVOutro();
+                $vDescIncond = $nfeProdutoImpostoIssqn->getVDescIncond();
+                $vDescCond = $nfeProdutoImpostoIssqn->getVDescCond();
+                $vISSRet = $nfeProdutoImpostoIssqn->getVIssRet();
+                $indISS = $nfeProdutoImpostoIssqn->getIndIss();
+                $cServico = $nfeProdutoImpostoIssqn->getCServico();
+                $cMun = $nfeProdutoImpostoIssqn->getCMun();
+                $cPais = $nfeProdutoImpostoIssqn->getCPais();
+                $nProcesso = $nfeProdutoImpostoIssqn->getNProcesso();
+                $indIncentivo = $nfeProdutoImpostoIssqn->getIndIncentivo();
+                $resposta = $nfeCriarXML->tagISSQN($nItem, $vBC, $vAliq, $vISSQN, $cMunFG, $cListServ, $vDeducao, $vOutro, $vDescIncond, $vDescCond, $vISSRet, $indISS, $cServico, $cMun, $cPais, $nProcesso, $indIncentivo);
+            }
+            
+            $pDevol = $nfeProduto->getPDevol();
+            $vIPIDevol = $nfeProduto->getVIpiDevol();
+            $resposta = $nfeCriarXML->tagimpostoDevol($nItem, $pDevol, $vIPIDevol);
+            
+            $texto = $nfeProduto->getInfAdProd();
+            $resposta = $nfeCriarXML->taginfAdProd($nItem, $texto );
+        }
+        
+        //ICMSTot
+        $vBCTot = $nfe->getVBc(); 
+        $vICMSTot = $nfe->getVIcms(); 
+        $vICMSDesonTot = $nfe->getVIcmsDeson(); 
+        $vBCSTTot = $nfe->getVBcSt(); 
+        $vSTTot = $nfe->getVSt(); 
+        $vProdTot = $nfe->getVProd(); 
+        $vFreteTot = $nfe->getVFrete();
+        $vSegTot = $nfe->getVSeg(); 
+        $vDescTot = $nfe->getVDesc(); 
+        $vIITot = $nfe->getVII(); 
+        $vIPITot = $nfe->getVIpi(); 
+        $vPISTot = $nfe->getVPis();
+        $vCOFINSTot = $nfe->getVCofins(); 
+        $vOutroTot = $nfe->getVOutro(); 
+        $vNFTot = $nfe->getVNf();
+        $vTotTribTot = $nfe->getVTotTrib();
+        $resposta = $nfeCriarXML->tagICMSTot($vBCTot, $vICMSTot, $vICMSDesonTot, $vBCSTTot, $vSTTot, $vProdTot, $vFreteTot, $vSegTot, $vDescTot, $vIITot, $vIPITot, $vPISTot, $vCOFINSTot, $vOutroTot, $vNFTot, $vTotTribTot);
+        
+        //ISSQNTot
+        $vServIss = $nfe->getVServ(); 
+        $vBCIss = $nfe->getVBcIss(); 
+        $vISS = $nfe->getVIss(); 
+        $vPISIss = $nfe->getVPisIss(); 
+        $vCOFINSIss = $nfe->getVCofinsIss(); 
+        $dCompetIss = $nfe->getDCompet(); 
+        $vDeducaoIss = $nfe->getVDeducao(); 
+        $vOutroIss = ''; 
+        $vDescIncondIss = $nfe->getVDescIncond(); 
+        $vDescCondIss = $nfe->getVDescCond(); 
+        $vISSRetIss = $nfe->getVIssRet(); 
+        $cRegTribIss = $nfe->getCRegTrib(); 
+        $resposta = $nfeCriarXML->tagISSQNTot($vServIss, $vBCIss, $vISS, $vPISIss, $vCOFINSIss, $dCompetIss, $vDeducaoIss, $vOutroIss, $vDescIncondIss, $vDescCondIss, $vISSRetIss, $cRegTribIss);
+        
+        //retTrib
+        $vRetPIS = $nfe->getVRetPis(); 
+        $vRetCOFINS = $nfe->getVRetCofins(); 
+        $vRetCSLL = $nfe->getVRetCsll(); 
+        $vBCIRRF = $nfe->getVBcIrrf(); 
+        $vIRRF = $nfe->getVIrrf(); 
+        $vBCRetPrev = $nfe->getVBcRetPrev(); 
+        $vRetPrev = $nfe->getVRetPrev(); 
+        $resposta = $nfeCriarXML->tagretTrib($vRetPIS, $vRetCOFINS, $vRetCSLL, $vBCIRRF, $vIRRF, $vBCRetPrev, $vRetPrev);
+        
+        //frete
+        $modFrete = $nfe->getTransModFrete(); //0=Por conta do emitente; 1=Por conta do destinatário/remetente; 2=Por conta de terceiros;
+        $resposta = $nfeCriarXML->tagtransp($modFrete);
+
+        //transportadora
+        $CNPJTrans = $nfe->getTransCnpj();
+        $CPFTrans = $nfe->getTransCpf();
+        $xNomeTrans = $nfe->getTrans_x_nome();
+        $IETrans = $nfe->getTransIe();
+        $xEnderTrans = $nfe->getTrans_x_ender();
+        $xMunTrans = $nfe->getTrans_x_mun();
+        $UFTrans = $nfe->getTransUf();
+        $resposta = $nfeCriarXML->tagtransporta($CNPJTrans, $CPFTrans, $xNomeTrans, $IETrans, $xEnderTrans, $xMunTrans, $UFTrans);
+
+        //valores retidos para transporte
+        $vServTrans = $nfe->getTrans_v_serv(); //Valor do Serviço
+        $vBCRetTrans = $nfe->getTrans_v_bcRet(); //BC da Retenção do ICMS
+        $pICMSRetTrans = $nfe->getTrans_p_icmsRet(); //Alíquota da Retenção
+        $vICMSRetTrans = $nfe->getTrans_v_icmsRet(); //Valor do ICMS Retido
+        $CFOPTrans = $nfe->getTransCfop();
+        $cMunFGTrans = $nfe->getTrans_c_munFg(); //Código do município de ocorrência do fato gerador do ICMS do transporte
+        $resposta = $nfeCriarXML->tagretTransp($vServTrans, $vBCRetTrans, $pICMSRetTrans, $vICMSRetTrans, $CFOPTrans, $cMunFGTrans);
+
+        //Dados dos veiculos de transporte
+        $placaTrans =  $nfe->getTransPlaca();
+        $UFVeic = $nfe->getTransVeicUf();
+        $RNTCTrans = $nfe->getTransRntc();
+        $resposta = $nfeCriarXML->tagveicTransp($placaTrans, $UFVeic, $RNTCTrans);
+
+        // Reboques Transporte
+        if($nfe->getTransTemReboque() == '1') {
+            $reboqueCollection = Mage::getModel('nfe/nfetransporte')->getCollection()
+                    ->addFieldToFilter('nfe_id', $nfeId)
+                    ->addFieldToFilter('tipo_informacao', 'reboque');
+            foreach($reboqueCollection as $reboqueModel) {
+                $placaReb = $reboqueModel->getPlaca();
+                $UFReb = $reboqueModel->getUf();
+                $RNTCReb = $reboqueModel->getRntc();
+                $vagaoReb = $reboqueModel->getVagao();
+                $balsaReb = $reboqueModel->getBalsa();
+                $resposta = $nfeCriarXML->tagreboque($placaReb, $UFReb, $RNTCReb, $vagaoReb, $balsaReb);
+            }
+        }
+        
+        // Volumes Transporte
+        if($nfe->getTransTemVol() == '1') {
+            $volumeCollection = Mage::getModel('nfe/nfetransporte')->getCollection()
+                    ->addFieldToFilter('nfe_id', $nfeId)
+                    ->addFieldToFilter('tipo_informacao', 'vol');
+            foreach($volumeCollection as $volumeModel) {
+                $qVol = $volumeModel->getQVol(); //Quantidade de volumes transportados
+                $espVol = $volumeModel->getEsp(); //Espécie dos volumes transportados
+                $marcaVol = $volumeModel->getMarca(); //Marca dos volumes transportados
+                $nVol = $volumeModel->getNVol(); //Numeração dos volume
+                $pesoLVol = $volumeModel->getPesoL();
+                $pesoBVol = $volumeModel->getPesoB();
+                $aLacresVol = $volumeModel->getNLacre();
+                $resposta = $nfeCriarXML->tagvol($qVol, $espVol, $marcaVol, $nVol, $pesoLVol, $pesoBVol, array($aLacresVol));
+            }
+        }
+        
+        /*
+        // Lacres Transporte
+        $lacreCollection = Mage::getModel('nfe/nfetransporte')->getCollection()
+                ->addFieldToFilter('nfe_id', $nfeId)
+                ->addFieldToFilter('tipo_informacao', 'lacres');
+        foreach($lacreCollection as $lacreModel) {
+            
+         */
+        
+        //dados da fatura
+        $nFatCob = $nfe->getCob_n_fat();
+        $vOrigCob = $nfe->getCob_v_orig();
+        $vDescCob = $nfe->getCob_v_desc();
+        $vLiqCob = $nfe->getCob_v_liq();
+        $resposta = $nfeCriarXML->tagfat($nFatCob, $vOrigCob, $vDescCob, $vLiqCob);
+
+        // Cobran�as
+        $cobrancaCollection = Mage::getModel('nfe/nfecobranca')->getCollection()
+                ->addFieldToFilter('nfe_id', $nfeId);
+        foreach($cobrancaCollection as $cobrancaModel) {
+            $nDupCob = $cobrancaModel->getCob_n_dup();
+            $dVencCob = substr($cobrancaModel->getCob_d_venc(), 0, 4).substr($cobrancaModel->getCob_d_venc(), 7, 3).substr($cobrancaModel->getCob_d_venc(), 4, 3);
+            $vDupCob = $cobrancaModel->getCob_v_dup();
+            $resposta = $nfeCriarXML->tagdup($nDupCob, $dVencCob, $vDupCob);
+        }
+        
+        //informações Adicionais
+        $infAdFisco = $nfe->getInfInfAdFisco();
+        $infCpl = $nfe->getInfInfCpl();
+        $resposta = $nfeCriarXML->taginfAdic($infAdFisco, $infCpl);
+
+        //observações emitente
+        $xCampoInf = $nfe->getInf_x_campo();
+        $xTextoInf = $nfe->getInf_x_texto();
+        $resposta = $nfeCriarXML->tagobsCont($xCampoInf, $xTextoInf);
+
+        /*
+        //observações fisco
+        $xCampo = $obs[0];
+        $xTexto = $obs[1];
+        //$resp = $nfe->tagobsFisco($xCampo, $xTexto);
+         */
+
+        //Dados do processo
+        $nProcInf = $nfe->getInf_n_proc();
+        $indProcInf = $nfe->getInfIndProc();
+        $resposta = $nfeCriarXML->tagprocRef($nProcInf, $indProcInf);
+
+        //dados exportação
+        if($nfe->getTemExportacao() == '1') {
+            $UFSaidaPais = $nfe->getExpUfSaidaPais();
+            $xLocExporta = $nfe->getExp_x_locExporta();
+            $xLocDespacho = $nfe->getExp_x_locDespacho();
+            $resposta = $nfeCriarXML->tagexporta($UFSaidaPais, $xLocExporta, $xLocDespacho);
+        }
+        
+        //dados de compras
+        if($nfe->getTpNf() == '0') {
+            $xNEmpComp = $nfe->getComp_x_n_emp();
+            $xPedComp = $nfe->getComp_x_ped();
+            $xContComp = $nfe->getComp_x_cont();
+            $resposta = $nfeCriarXML->tagcompra($xNEmpComp, $xPedComp, $xContComp);
+        }
     }
     
     private function gerarArquivoXML($nfeCriarXML) {
+        $resp = $nfeCriarXML->montaNFe();
+        if ($resp) {
+            header('Content-type: text/xml; charset=UTF-8');
+            echo $nfeCriarXML->getXML();
+        } else {
+            header('Content-type: text/html; charset=UTF-8');
+            foreach ($nfeCriarXML->erros as $err) {
+                echo 'tag: &lt;'.$err['tag'].'&gt; ---- '.$err['desc'].'<br>';
+            }
+        }
+        // Utilizar somente no desenvolvimento inicial. Apagar em seguida.
+        exit();
+        // Utilizar somente no desenvolvimento inicial. Apagar em seguida.
     }
     
     private function getFormaPagamento($order) {
