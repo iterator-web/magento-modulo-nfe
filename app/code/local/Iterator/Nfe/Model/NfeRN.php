@@ -71,20 +71,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
         $mod = '55';
         $nfeRange = Mage::getModel('nfe/nferange')->load('1');
-        if(!$nfeRange->getNumero()) {
-            $retorno['status'] = 'erro';
-            $retorno['msg'] = utf8_encode('O Range do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
-            return $retorno;
-        } else {
-            $serie = $nfeRange->getSerie();
-            $nNF = $nfeRange->getNumero();
-            $novoRangeNumero = $nNF + 1;
-            if($novoRangeNumero > 999999999) {
-                $nfeRange->setSerie($serie+1);
-            }
-            $nfeRange->setNumero($novoRangeNumero);
-            $nfeRange->save();
-        }
+        $serie = $nfeRange->getSerie();
+        $nNF = $nfeRange->getNumero();
+        $this->setRange($nfeRange);
         $tpEmis = Mage::getStoreConfig('nfe/nfe_opcoes/emissao');
         $cNF = $this->gerarCodigoNumerico();
         $chave = $cUF . $aamm . $cnpj . $mod . $serie . $nNF . $tpEmis . $cNF;
@@ -92,6 +81,8 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $chave .= $cDV;
         $indPag = $this->getFormaPagamento($order);
         if($indPag == null) {
+            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('A forma de pagamento não é válida. Pedido: '.$order->getIncrementId());
             return $retorno;
@@ -106,6 +97,8 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
         $cMunFG = Mage::getStoreConfig('nfe/emitente_opcoes/codigo_municipio');
         if(!$cMunFG) {
+            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('O Código do Município do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
             return $retorno;
@@ -149,7 +142,6 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfe->setIndPres('2');
         $nfe->setProcEmi('0');
         $nfe->setVerProc('1.0.0');
-        $nfe->setTemEntrega('1');
         $nfe->save();
         
         $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao');
@@ -169,6 +161,8 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('Uma ou mais informações do emitente da NF-e não são válidas. Pedido: '.$order->getIncrementId());
             try {
+                $nfeRange->setNumero($novoRangeNumero-1);
+                $nfeRange->save();
                 $nfe->delete();
                 $resource = Mage::getSingleton('core/resource');
                 $writeConnection = $resource->getConnection('core_write');
@@ -184,6 +178,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         
         $nfeIdentificacaoEmitente->setNfeId($nfeId);
         $nfeIdentificacaoEmitente->setTipoIdentificacao('emit');
+        $nfeIdentificacaoEmitente->setTipoPessoa(2);
         $nfeIdentificacaoEmitente->setCnpj($cnpj);
         $nfeIdentificacaoEmitente->setXNome($razaoSocial);
         $nfeIdentificacaoEmitente->setXFant($nomeFantasia);
@@ -193,6 +188,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeIdentificacaoEmitente->setXBairro($bairro);
         $nfeIdentificacaoEmitente->setCMun($cMunFG);
         $nfeIdentificacaoEmitente->setXMun($nomeMunicipio);
+        $nfeIdentificacaoEmitente->setRegionId($estadoEmitente->getRegionId());
         $nfeIdentificacaoEmitente->setUf($estadoEmitente->getCode());
         $nfeIdentificacaoEmitente->setCep($cep);
         $nfeIdentificacaoEmitente->setCPais('1058');
@@ -219,8 +215,23 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             if(!$validarCampos->validarCnpj($cpfCnpj)) {
                 $retorno['status'] = 'erro';
                 $retorno['msg'] = utf8_encode('O CNPJ do destinatário da NF-e não é válido. Pedido: '.$order->getIncrementId());
+                try {
+                    $nfeRange->setNumero($novoRangeNumero-1);
+                    $nfeRange->save();
+                    $nfeIdentificacaoEmitente->delete();
+                    $nfe->delete();
+                    $resource = Mage::getSingleton('core/resource');
+                    $writeConnection = $resource->getConnection('core_write');
+                    $table = $resource->getTableName('nfe/nfe');
+                    $autoIncrement = (int)$nfeId;
+                    $query = "ALTER TABLE {$table} AUTO_INCREMENT = {$autoIncrement}";
+                    $writeConnection->query($query);
+                } catch (Exception $e) {
+                    $retorno['msg'] = $e;
+                }
                 return $retorno;
             }
+            $nfeIdentificacaoDestinatario->setTipoPessoa(2);
             $nfeIdentificacaoDestinatario->setCnpj($cpfCnpj);
             $nfeIdentificacaoDestinatario->setXNome($cliente->getRazaosocial());
             if($cliente->getIe()) {
@@ -233,8 +244,23 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             if(!$validarCampos->validarCpf($cpfCnpj)) {
                 $retorno['status'] = 'erro';
                 $retorno['msg'] = utf8_encode('O CPF do destinatário da NF-e não é válido. Pedido: '.$order->getIncrementId());
+                try {
+                    $nfeRange->setNumero($novoRangeNumero-1);
+                    $nfeRange->save();
+                    $nfeIdentificacaoEmitente->delete();
+                    $nfe->delete();
+                    $resource = Mage::getSingleton('core/resource');
+                    $writeConnection = $resource->getConnection('core_write');
+                    $table = $resource->getTableName('nfe/nfe');
+                    $autoIncrement = (int)$nfeId;
+                    $query = "ALTER TABLE {$table} AUTO_INCREMENT = {$autoIncrement}";
+                    $writeConnection->query($query);
+                } catch (Exception $e) {
+                    $retorno['msg'] = $e;
+                }
                 return $retorno;
             }
+            $nfeIdentificacaoDestinatario->setTipoPessoa(1);
             $nfeIdentificacaoDestinatario->setCpf($cpfCnpj);
             $nfeIdentificacaoDestinatario->setXNome($order->getShippingAddress()->getFirstname().' '.$order->getShippingAddress()->getLastname());
             $nfeIdentificacaoDestinatario->setIndIeDest('9');
@@ -244,9 +270,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeIdentificacaoDestinatario->setXCpl($order->getShippingAddress()->getStreet(3));
         $nfeIdentificacaoDestinatario->setXBairro($order->getShippingAddress()->getStreet(4));
         if($nfeMunicipio->getCodigo()) {
-            $nfeIdentificacaoDestinatario->setCMun($nfeMunicipio->getCodigo());
+            $nfeIdentificacaoDestinatario->setCMun($nfeMunicipio->getIbgeUf().$nfeMunicipio->getCodigo());
             $nfeIdentificacaoDestinatario->setXMun($nfeMunicipio->getNome());
         }
+        $nfeIdentificacaoDestinatario->setRegionId($estadoDestinatario->getRegionId());
         $nfeIdentificacaoDestinatario->setUf($estadoDestinatario->getCode());
         $nfeIdentificacaoDestinatario->setCep(preg_replace('/[^\d]/', '', $order->getShippingAddress()->getPostcode()));
         $nfeIdentificacaoDestinatario->setCPais('1058');
@@ -381,7 +408,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $nfeProduto->save();
                 
                 if($existeMotorImpostos && $existeDadosNcm) {
-                    $impostosRetorno = $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId());
+                    $impostosRetorno = $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId(), $estadoDestinatario->getRegionId());
                     if($impostosRetorno['vBC'] > 0) {
                         $vBC += $impostosRetorno['vBC'];
                     }
@@ -434,18 +461,25 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         
         $nfe->setTransModFrete(0);
         if(strpos($order->getShippingDescription(), 'Correios') !== false) {
-            $nfe->setTransCnpj(Mage::getStoreConfig('carriers/pedroteixeira_correios/cnpj'));
+            $nfe->setTransTipoPessoa(2);
+            $nfe->setTransCnpj(preg_replace('/[^\d]/', '', Mage::getStoreConfig('carriers/pedroteixeira_correios/cnpj')));
             $nfe->setTrans_x_nome(Mage::getStoreConfig('carriers/pedroteixeira_correios/razao'));
-            $nfe->setTransIe(Mage::getStoreConfig('carriers/pedroteixeira_correios/ie'));
+            $nfe->setTransIe(preg_replace('/[^\d]/', '', Mage::getStoreConfig('carriers/pedroteixeira_correios/ie')));
             $nfe->setTrans_x_ender(Mage::getStoreConfig('carriers/pedroteixeira_correios/endereco'));
             $nfe->setTrans_x_mun(Mage::getStoreConfig('carriers/pedroteixeira_correios/municipio'));
             $estadoTransp = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+            $nfe->setTransRegionId($estadoTransp->getRegionId());
             $nfe->setTransUf($estadoTransp->getCode());
-            $nfe->setTransEsp(Mage::getStoreConfig('carriers/pedroteixeira_correios/embalagem'));
         }
-        $nfe->setTrans_q_vol(1);
-        $nfe->setTransPesoL($order->getWeight());
-        $nfe->setTransPesoB($order->getWeight());
+        $nfe->setTransTemVol(1);
+        $nfeTransporteVol = Mage::getModel('nfe/nfetransporte');
+        $nfeTransporteVol->setNfeId($nfeId);
+        $nfeTransporteVol->setTipoInformacao('vol');
+        $nfeTransporteVol->setQVol(1);
+        $nfeTransporteVol->setEsp(Mage::getStoreConfig('carriers/pedroteixeira_correios/embalagem'));
+        $nfeTransporteVol->setPesoL($order->getWeight());
+        $nfeTransporteVol->setPesoB($order->getWeight());
+        $nfeTransporteVol->save();
         
         $infCpl = null;
         if($existeMotorImpostos) {
@@ -469,10 +503,13 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         return $retorno;
     }
     
-    public function gerarXML() {
+    public function gerarXML($nfeId) {
+        // MÉTODOS QUE SERÃO UTILIZADOS NO MOMENTO DA GERAÇÃO DO XML. BOTÃO NO FORM DE CONFIRMAÇÃO INVOCARÁ O SAVE DO CONTROLLER DA NFE QUE DEPOIS INVOCARÁ ESTES MÉTODOS.
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
         $this->preencherCampos($nfeCriarXML);
         $this->gerarArquivoXML($nfeCriarXML);
+        // O diretório onde são salvos os XML não poderá ser manipulado e portanto não existirá como opção nas configurações, será fixo como "nfe" na raíz do Magento por exemplo e cada pacote será referenciado por: "ID_NúmeroNota"
+        return true;
     }
     
     private function preencherCampos($nfeCriarXML) {
@@ -480,32 +517,6 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     }
     
     private function gerarArquivoXML($nfeCriarXML) {
-        
-    }
-    
-    private function gerarCodigoNumerico($length=8) {
-        $numero = '';
-        for ($x=0;$x<$length;$x++){
-            $numero .= rand(0,9);
-        }
-        return $numero;
-    }
-    
-    private function calcularDV($chave43) {
-        $multiplicadores = array(2,3,4,5,6,7,8,9);
-        $i = 42;
-        while ($i >= 0) {
-            for ($m=0; $m<count($multiplicadores) && $i>=0; $m++) {
-                $soma_ponderada+= $chave43[$i] * $multiplicadores[$m];
-                $i--;
-            }
-        }
-        $resto = $soma_ponderada % 11;
-        if ($resto == '0' || $resto == '1') {
-            return 0;
-        } else {
-            return (11 - $resto);
-       }
     }
     
     private function getFormaPagamento($order) {
@@ -531,5 +542,56 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
          Status: Aguardando Aprovação'));
         
         $order->save();
+    }
+    
+    public function gerarCodigoNumerico($length=8) {
+        $numero = '';
+        for ($x=0;$x<$length;$x++){
+            $numero .= rand(0,9);
+        }
+        return $numero;
+    }
+    
+    public function calcularDV($chave43) {
+        $multiplicadores = array(2,3,4,5,6,7,8,9);
+        $i = 42;
+        while ($i >= 0) {
+            for ($m=0; $m<count($multiplicadores) && $i>=0; $m++) {
+                $soma_ponderada+= $chave43[$i] * $multiplicadores[$m];
+                $i--;
+            }
+        }
+        $resto = $soma_ponderada % 11;
+        if ($resto == '0' || $resto == '1') {
+            return 0;
+        } else {
+            return (11 - $resto);
+       }
+    }
+    
+    public function setRange($nfeRange) {
+        $serie = $nfeRange->getSerie();
+        $nNF = $nfeRange->getNumero();
+        $novoRangeNumero = $nNF + 1;
+        if($novoRangeNumero > 999999999) {
+            $nfeRange->setSerie($serie+1);
+        }
+        $nfeRange->setNumero($novoRangeNumero);
+        $nfeRange->save();
+    }
+    
+    public function confirmarItensNfe($nfeId, $produtosMovimento) {
+        $produtosNfe = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeId));
+        foreach($produtosNfe as $produtoNfe) {
+            $foiMovimentado = false;
+            foreach($produtosMovimento as $produtoMovimentado) {
+                if($produtoNfe->getProduto() == $produtoMovimentado) {
+                    $foiMovimentado = true;
+                }
+            }
+            if(!$foiMovimentado) {
+                $produtoNfe->delete();
+            }
+        }
     }
 }

@@ -88,6 +88,10 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 Mage::getSingleton('adminhtml/session')->addError($this->__(utf8_encode('Esta NF-e já não existe mais.')));
                 $this->_redirect('*/*/');
                 return;
+            } else if($model->getStatus() != '0' && $model->getStatus() != '4') {
+                Mage::getSingleton('adminhtml/session')->addError($this->__(utf8_encode('Esta NF-e não pode ser alterada.')));
+                $this->_redirect('*/*/');
+                return;
             }
         } else {
             $this->setEmitenteInfos($emitenteModel);
@@ -206,9 +210,13 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $msgErro = utf8_encode('O Munícipio do transportador da NF-e não é válido.');
                 }
                 $model->setTrans_x_mun($nfeMunicipioTransporte->getNome());
-                $estadoTransp = Mage::getModel('directory/region')->load($postData['nfe']['region_id']);
+                $model->setTrans_c_munFg($nfeMunicipioTransporte->getIbgeUf().$nfeMunicipioTransporte->getCodigo());
+                $estadoTransp = Mage::getModel('directory/region')->load($postData['nfe']['trans_region_id']);
                 $model->setTransRegionId($estadoTransp->getRegionId());
                 $model->setTransUf($estadoTransp->getCode());
+                $estadoPlacaTransp = Mage::getModel('directory/region')->load($postData['nfe']['trans_veic_region_id']);
+                $model->setTransVeicRegionId($estadoPlacaTransp->getRegionId());
+                $model->setTransVeicUf($estadoPlacaTransp->getCode());
                 $model->save();
                 $nfeId = $model->getNfeId();
                 
@@ -456,6 +464,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $volume->setNVol($volumesArray['option_'.$i]['n_vol']);
                             $volume->setPesoL($volumesArray['option_'.$i]['peso_l']);
                             $volume->setPesoB($volumesArray['option_'.$i]['peso_b']);
+                            $volume->setNLacre($volumesArray['option_'.$i]['n_lacre']);
                             $volume->save();
                         }
                     }
@@ -588,8 +597,10 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $nfeProduto->setVSeg($itensArray['option_'.$i]['v_seg']);
                         $nfeProduto->setVDesc($itensArray['option_'.$i]['v_desc']);
                         $nfeProduto->setVOutro($itensArray['option_'.$i]['v_outro']);
-                        if($itensArray['option_'.$i]['ind_tot'] == '1') {
+                        if(isset($itensArray['option_'.$i]['ind_tot'])) {
                             $nfeProduto->setIndTot('1');
+                        } else {
+                            $nfeProduto->setIndTot(null);
                         }
                         $nfeProduto->setXPed($postData['nfe']['pedido_increment_id']);
                         $nfeProduto->setNItemPed($nItem);
@@ -804,6 +815,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                                     $msgErro = utf8_encode('O Munícipio de ocorrência da ISSQN da NF-e não é válido.');
                                 }
                                 $nfeProdutoImposto->setMunicipioIssqn($issqnMunicipio->getNome());
+                                $nfeProdutoImposto->setCMunFg($issqnMunicipio->getIbgeUf().$issqnMunicipio->getCodigo());
                             }
                             $nfeProdutoImposto->setCListServ($itensArray['option_'.$i]['c_list_serv']);
                             $nfeProdutoImposto->setVDeducao($itensArray['option_'.$i]['v_deducao']);
@@ -821,7 +833,9 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                                     $msgErro = utf8_encode('O Munícipio de incidência da ISSQN da NF-e não é válido.');
                                 }
                                 $nfeProdutoImposto->setMunicipioIncidencia($incidenciaMunicipio->getNome());
+                                $nfeProdutoImposto->setCMun($incidenciaMunicipio->getIbgeUf().$incidenciaMunicipio->getCodigo());
                             }
+                            $nfeProdutoImposto->setCPais('1058');
                             $nfeProdutoImposto->setNProcesso($itensArray['option_'.$i]['n_processo']);
                             $nfeProdutoImposto->setIndIncentivo($itensArray['option_'.$i]['ind_incentivo']);
                             $nfeProdutoImposto->save();
@@ -850,7 +864,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $nfeProdutoImposto->setTipoImposto('ii');
                             $nfeProdutoImposto->setIi_v_bc($itensArray['option_'.$i]['ii_v_bc']);
                             $nfeProdutoImposto->setVDespAdu($itensArray['option_'.$i]['v_desp_adu']);
-                            $nfeProdutoImposto->setVIi($itensArray['option_'.$i]['v_II']);
+                            $nfeProdutoImposto->setVII($itensArray['option_'.$i]['v_II']);
                             $nfeProdutoImposto->setVIof($itensArray['option_'.$i]['v_iof']);
                             $nfeProdutoImposto->save();
                             $nfeProdutoImportacao = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()

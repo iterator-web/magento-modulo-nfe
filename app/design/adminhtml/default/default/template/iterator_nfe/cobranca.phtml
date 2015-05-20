@@ -66,7 +66,7 @@ $_counter = 0;
                 <tr class="option-row nfe-transporte-duplicatarow" id="duplicata-row-<?php echo $_counter?>">                    
                     <td align="center"><input id="cob_n_dup<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_n_dup]" value="<?php echo $duplicata->getCob_n_dup() ?>" class="input-text required-entry" type="text"></td>
                     <td align="center">
-                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_d_venc]" id="cob_d_venc<?php echo $_counter?>value" value="<?php echo date("m/d/Y", strtotime($duplicata->getCob_d_venc())) ?>" title="Data de Vencimento" type="text" class="input-text" /> <img src="<?php echo $this->getSkinUrl('images/grid-cal.gif'); ?>" alt="" class="v-middle" id="cob_d_venc<?php echo $_counter?>_trig" title="Select Date" style="" />
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_d_venc]" id="cob_d_venc<?php echo $_counter?>value" value="<?php echo date("m/d/y", strtotime($duplicata->getCob_d_venc())) ?>" title="Data de Vencimento" type="text" class="input-text" /> <img src="<?php echo $this->getSkinUrl('images/grid-cal.gif'); ?>" alt="" class="v-middle" id="cob_d_venc<?php echo $_counter?>_trig" title="Select Date" style="" />
                         <script type="text/javascript">
                         //<![CDATA[
                             Calendar.setup({
