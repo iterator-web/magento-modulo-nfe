@@ -53,7 +53,7 @@ function respondToChange(event) {
             elementId.indexOf('v_frete') > -1 || elementId.indexOf('v_seg') > -1 || elementId.indexOf('v_desc') > -1 || elementId.indexOf('v_outro') > -1 || 
             elementId.indexOf('v_bc') > -1 || elementId.indexOf('v_icms') > -1 || elementId.indexOf('v_bc_st') > -1 || elementId.indexOf('v_icms_st') > -1 ||
             elementId.indexOf('v_icms_deson') > -1 || elementId.indexOf('v_tot_trib') > -1 || elementId.indexOf('v_ll') > -1 || elementId.indexOf('v_ipi') > -1 ||
-            elementId.indexOf('v_pis') > -1 || elementId.indexOf('v_cofins') > -1 || elementId.indexOf('v_prod') > -1) {
+            elementId.indexOf('v_pis') > -1 || elementId.indexOf('v_cofins') > -1 || elementId.indexOf('v_prod') > -1 || elementId === 'v_st') {
         converterFloat(''+elementId+'', document.getElementById(''+elementId+'').value);
         atualizarValorTotalProduto(elementId);
         atualizarValorTotalNota();
@@ -679,6 +679,9 @@ function atualizarValorTotalProduto(elementId) {
     if(elementId.indexOf('v_icms_st') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('cst_csosn') > -1 || elementId.indexOf('operacao') > -1) {
         $('v_st').value = parseFloat(vIcmsStTotal).toFixed(4);
     }
+    if(elementId.indexOf('v_st') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('cst_csosn') > -1 || elementId.indexOf('operacao') > -1) {
+        $('v_st').value = parseFloat(vIcmsStTotal).toFixed(4);
+    }
     if(elementId.indexOf('v_icms_deson') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('cst_csosn') > -1 || elementId.indexOf('operacao') > -1) {
         $('v_icms_deson').value = parseFloat(vIcmsDesonTotal).toFixed(4);
     }
@@ -705,6 +708,9 @@ function atualizarValorTotalNota() {
     }
     if(document.getElementById('v_prod').value !== '') {
         valorTotalNota += parseFloat(document.getElementById('v_prod').value);
+    }
+    if(document.getElementById('v_st').value !== '') {
+        valorTotalNota += parseFloat(document.getElementById('v_st').value);
     }
     if(document.getElementById('v_seg').value !== '') {
         valorTotalNota += parseFloat(document.getElementById('v_seg').value);
