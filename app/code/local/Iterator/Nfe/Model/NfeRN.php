@@ -301,6 +301,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $temPis = null;
                 $temCofins = null;
                 $temIpi = null;
+                $prodSt = null;
                 $prodIpi = null;
                 $aliquotaIbpt = null;
                 $nfeProduto = Mage::getModel('nfe/nfeproduto');
@@ -419,6 +420,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         $vBCST += $impostosRetorno['vBCST'];
                     }
                     if($impostosRetorno['vST'] > 0) {
+                        $prodSt = $impostosRetorno['vST'];
                         $vST += $impostosRetorno['vST'];
                     }
                     if($impostosRetorno['vIPI'] > 0) {
@@ -430,21 +432,32 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     }
                     //$vPis = '';
                     //$vCofins = '';
+                    if($vST > 0) {
+                        $vProd -= $prodSt;
+                        $reduzirUnSt = $prodSt / $item->getQtyOrdered();
+                        $vUnComTrib -= $reduzirUnSt;
+                        $nfeProduto->setVUnCom($vUnComTrib);
+                        $nfeProduto->setVProd($vProd);
+                        $nfeProduto->setVUnTrib($vUnComTrib);
+                        $nfeProduto->save();
+                    }
                     if($vIpi > 0) {
+                        $vProd -= $prodIpi;
                         $reduzirUn = $prodIpi / $item->getQtyOrdered();
-                        $nfeProduto->setVUnCom($vUnComTrib - $reduzirUn);
-                        $nfeProduto->setVProd($vProd - $prodIpi);
-                        $nfeProduto->setVUnTrib($vUnComTrib - $reduzirUn);
+                        $vUnComTrib -= $reduzirUn;
+                        $nfeProduto->setVUnCom($vUnComTrib);
+                        $nfeProduto->setVProd($vProd);
+                        $nfeProduto->setVUnTrib($vUnComTrib);
                         $nfeProduto->save();
                     }
                 }
                 
-                $totalVProd += $vProd - $prodIpi;
+                $totalVProd += $vProd;
                 $totalVFrete += $vFrete;
                 $totalVDesc += $vDesc;
                 //$totalVSeg = null;
                 //$totalVOutro = null;
-                $totalVNf += $vProd - $vDesc + $vFrete;
+                $totalVNf += $vProd - $vDesc + $vFrete + $prodIpi + $prodSt;
                 $totalAliquotaIbpt += $aliquotaIbpt;
             }
         }
