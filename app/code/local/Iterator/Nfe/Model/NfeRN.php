@@ -516,20 +516,18 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         return $retorno;
     }
     
-    public function gerarXML($nfeId) {
-        // MÉTODOS QUE SERÃO UTILIZADOS NO MOMENTO DA GERAÇÃO DO XML. BOTÃO NO FORM DE CONFIRMAÇÃO INVOCARÁ O SAVE DO CONTROLLER DA NFE QUE DEPOIS INVOCARÁ ESTES MÉTODOS.
+    public function gerarXML($nfeId, $idTag, $tpNf) {
+        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
-        $this->preencherCampos($nfeId, $nfeCriarXML);
-        $this->gerarArquivoXML($nfeCriarXML);
-        // O diretório onde são salvos os XML não poderá ser manipulado e portanto não existirá como opção nas configurações, será fixo como "nfe" na raíz do Magento por exemplo e cada pacote será referenciado por: "ID_NúmeroNota"
-        return true;
+        $this->preencherCampos($nfe, $nfeCriarXML);
+        $retornoXml = $this->gerarArquivoXML($nfe, $nfeCriarXML);
+        return $retornoXml;
     }
     
-    private function preencherCampos($nfeId, $nfeCriarXML) {
-        // NF-e
-        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+    private function preencherCampos($nfe, $nfeCriarXML) {
+        $nfeId = $nfe->getNfeId();
         //Numero e versÃ£o da NFe (infNFe)
-        $chave = $nfe->getIdTag();
+        $chave = substr($nfe->getIdTag(),3);
         $versao = $nfe->getVersao();
         $resposta = $nfeCriarXML->taginfNFe($chave, $versao);
 
@@ -672,7 +670,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $UF = $nfeIdentificacaoDestinatario->getUf();
         $CEP = $nfeIdentificacaoDestinatario->getCep();
         $cPais = $nfeIdentificacaoDestinatario->getCPais();
-        $xPais = $nfeIdentificacaoDestinatario->getXPais;
+        $xPais = $nfeIdentificacaoDestinatario->getXPais();
         $fone = $nfeIdentificacaoDestinatario->getFone();
         $resposta = $nfeCriarXML->tagenderDest($xLgr, $nro, $xCpl, $xBairro, $cMun, $xMun, $UF, $CEP, $cPais, $xPais, $fone);
         
@@ -1181,20 +1179,33 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
     }
     
-    private function gerarArquivoXML($nfeCriarXML) {
-        $resp = $nfeCriarXML->montaNFe();
-        if ($resp) {
+    private function gerarArquivoXML($nfe, $nfeCriarXML) {
+        $resposta = $nfeCriarXML->montaNFe();
+        if ($resposta) {
+            if($nfe->getTpNf() == '0') {
+                $tipo = 'entrada';
+            } else {
+                $tipo = 'saida';
+            }
+            $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS;
             header('Content-type: text/xml; charset=UTF-8');
-            echo $nfeCriarXML->getXML();
+            $xmlNfe = $nfeCriarXML->getXML();
+            $this->salvarXml($xmlNfe, $caminho, $nfe->getIdTag());
+            return 'sucesso';
         } else {
             header('Content-type: text/html; charset=UTF-8');
             foreach ($nfeCriarXML->erros as $err) {
-                echo 'tag: &lt;'.$err['tag'].'&gt; ---- '.$err['desc'].'<br>';
+                $erros = 'tag: &lt;'.$err['tag'].'&gt; ---- '.$err['desc'].'<br>';
             }
+            return $erros;
         }
-        // Utilizar somente no desenvolvimento inicial. Apagar em seguida.
-        exit();
-        // Utilizar somente no desenvolvimento inicial. Apagar em seguida.
+    }
+    
+    private function salvarXml($xmlNfe, $caminho, $idTag) {
+        $doc = new DOMDocument("1.0", "UTF-8");
+        $doc->formatOutput = true;
+        $doc->loadXML($xmlNfe);
+        $doc->save($caminho.$idTag.'.xml');
     }
     
     private function getFormaPagamento($order) {

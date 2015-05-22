@@ -902,11 +902,18 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 $nfeRN->confirmarItensNfe($nfeId, $produtosMovimento);
                 if(!$erro) {
                     $xmlGerado = $nfeRN->gerarXml($nfeId);
-                    if($xmlGerado) {
+                    if($xmlGerado == 'sucesso') {
                         Mage::getSingleton('adminhtml/session')->addSuccess($this->__('A NF-e foi salva com sucesso.'));
                         $model->setStatus('1');
                         $model->setMensagem(utf8_encode('Aguardando envio ao orgão responsável.'));
                         $model->save();
+                    } else {
+                        Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto o XML desta NF-e era gerado. '.$xmlGerado));
+                        $model->setStatus('0');
+                        $model->setMensagem($msgErro);
+                        $model->save();
+                        $this->_redirect('*/*/');
+                        return;
                     }
                     if ($this->getRequest()->getParam('back')) {
                         $this->_redirect('*/*/edit', array('id' => $model->getId()));
