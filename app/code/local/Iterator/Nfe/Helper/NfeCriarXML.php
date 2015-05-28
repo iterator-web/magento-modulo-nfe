@@ -3446,7 +3446,7 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
      */
     private function zAddChild(&$parent, $name, $content = '', $obrigatorio = false, $descricao = "", $force = false)
     {
-        if ($obrigatorio && $content === '' && !$force) {
+        if ($obrigatorio && $content === '' && !$force || $obrigatorio && $content === null && !$force) {
             $this->erros[] = array(
                 "tag" => $name,
                 "desc" => $descricao,
@@ -3454,9 +3454,11 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
             );
         }
         if ($obrigatorio || $content !== '') {
-            $content = trim($content);
-            $temp = $this->dom->createElement($name, $content);
-            $parent->appendChild($temp);
+            if($content != null) {
+                $content = trim($content);
+                $temp = $this->dom->createElement($name, $content);
+                $parent->appendChild($temp);
+            }
         }
     }
     
@@ -3481,4 +3483,3 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         }
     }
 }
-
