@@ -910,7 +910,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     } else {
                         Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto o XML desta NF-e era gerado. '.$xmlGerado));
                         $model->setStatus('0');
-                        $model->setMensagem($msgErro);
+                        $model->setMensagem($xmlGerado);
                         $model->save();
                         $this->_redirect('*/*/');
                         return;
