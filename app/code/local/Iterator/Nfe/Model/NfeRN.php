@@ -516,12 +516,22 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         return $retorno;
     }
     
-    public function gerarXML($nfeId, $idTag, $tpNf) {
+    public function gerarXML($nfeId) {
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
         $this->preencherCampos($nfe, $nfeCriarXML);
         $retornoXml = $this->gerarArquivoXML($nfe, $nfeCriarXML);
-        return $retornoXml;
+        if($retornoXml == 'sucesso') {
+            $xmlNfe = $this->getXmlNfe($nfe);
+            $xmlAssinado = $this->assinarXml($xmlNfe, 'infNFe', $nfe);
+            if($xmlAssinado == 'sucesso') {
+                $xmlNfe = $this->getXmlNfe($nfe);
+            } else {
+                return $xmlAssinado;
+            }
+        } else {
+            return $retornoXml;
+        }
     }
     
     private function preencherCampos($nfe, $nfeCriarXML) {
@@ -537,8 +547,8 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $natOp = $nfe->getNatOp(); //natureza da operação
         $indPag = $nfe->getIndPag(); //0=Pagamento à vista; 1=Pagamento a prazo; 2=Outros
         $mod = $nfe->getMod(); //modelo da NFe 55 ou 65 essa última NFCe
-        $serie = $nfe->getSerie(); //serie da NFe
-        $nNF = $nfe->getNNf(); // numero da NFe
+        $serie = strval(intval($nfe->getSerie())); //serie da NFe
+        $nNF = strval(intval($nfe->getNNf())); // numero da NFe
         $dhEmi = str_replace(' ', 'T', $nfe->getDhEmi()).'-03:00';  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
         $dhSaiEnt = str_replace(' ', 'T', $nfe->getDhSaiEnt()).'-03:00'; //versão 2.00, 3.00 e 3.10
         $tpNF = $nfe->getTpNf();
@@ -656,7 +666,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $xNome = $nfeIdentificacaoDestinatario->getXNome();
         $indIEDest = $nfeIdentificacaoDestinatario->getIndIeDest();
         $IE = $nfeIdentificacaoDestinatario->getIe();
-        $ISUF = $nfeIdentificacaoDestinatario->getIsuf();
+        $ISUF = null;
+        if($nfe->getTransCfop() != '0') {
+            $ISUF = $nfeIdentificacaoDestinatario->getIsuf();
+        }
         $IM = $nfeIdentificacaoDestinatario->getIm();
         $email = $nfeIdentificacaoDestinatario->getEmail();
         $resposta = $nfeCriarXML->tagdest($CNPJ, $CPF, $idEstrangeiro, $xNome, $indIEDest, $IE, $ISUF, $IM, $email);
@@ -729,6 +742,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()
                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId));
         foreach($nfeProdutos as $nfeProduto) {
+            $vFrete = null;
+            $vSeg = null;
+            $vDesc = null;
+            $vOutro = null;
             $produtoId = $nfeProduto->getProdutoId();
             $nItem = $nfeProduto->getNItem();
             $cProd = $nfeProduto->getCProd();
@@ -746,10 +763,18 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $uTrib = $nfeProduto->getUTrib();
             $qTrib = $nfeProduto->getQTrib();
             $vUnTrib = $nfeProduto->getVUnTrib();
-            $vFrete = $nfeProduto->getVFrete();
-            $vSeg = $nfeProduto->getVSeg();
-            $vDesc = $nfeProduto->getVDesc();
-            $vOutro = $nfeProduto->getVOutro();
+            if($nfeProduto->getVFrete() != '0.00') {
+                $vFrete = $nfeProduto->getVFrete();
+            }
+            if($nfeProduto->getVSeg() != '0.00') {
+                $vSeg = $nfeProduto->getVSeg();
+            }
+            if($nfeProduto->getVDesc() != '0.00') {
+                $vDesc = $nfeProduto->getVDesc();
+            }
+            if($nfeProduto->getVOutro() != '0.00') {
+                $vOutro = $nfeProduto->getVOutro();
+            }
             $indTot = $nfeProduto->getIndTot();
             $xPed = $nfeProduto->getXPed();
             $nItemPed = $nfeProduto->getNItemPed();
@@ -928,7 +953,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         ->addFieldToFilter('produto_id', array('eq' => $produtoId))
                         ->addFieldToFilter('tipo_imposto', array('pis'))
                         ->getFirstItem();
-                $cst = $nfeProdutoImpostoPis->getCst();
+                $pisCst = $nfeProdutoImpostoPis->getCst();
+                if(strlen($pisCst) == 1) {
+                    $pisCst = '0'.$nfeProdutoImpostoPis->getCst();
+                }
+                $cst = $pisCst;
                 $vBC = $nfeProdutoImpostoPis->getVBc();
                 $pPIS = $nfeProdutoImpostoPis->getPPis();
                 $vPIS = $nfeProdutoImpostoPis->getVPis();
@@ -945,7 +974,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         ->addFieldToFilter('produto_id', array('eq' => $produtoId))
                         ->addFieldToFilter('tipo_imposto', array('cofins'))
                         ->getFirstItem();
-                $cst = $nfeProdutoImpostoCofins->getCst();
+                $cofinsCst = $nfeProdutoImpostoCofins->getCst();
+                if(strlen($cofinsCst) == 1) {
+                    $cofinsCst = '0'.$nfeProdutoImpostoCofins->getCst();
+                }
+                $cst = $cofinsCst;
                 $vBC = $nfeProdutoImpostoCofins->getVBc();
                 $pCOFINS = $nfeProdutoImpostoCofins->getPCofins();
                 $vCOFINS = $nfeProdutoImpostoCofins->getVCofins();
@@ -962,7 +995,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         ->addFieldToFilter('produto_id', array('eq' => $produtoId))
                         ->addFieldToFilter('tipo_imposto', array('ipi'))
                         ->getFirstItem();
-                $cst = $nfeProdutoImpostoIpi->getCst();
+                $ipiCst = $nfeProdutoImpostoIpi->getCst();
+                if(strlen($ipiCst) == 1) {
+                    $ipiCst = '0'.$nfeProdutoImpostoIpi->getCst();
+                }
+                $cst = $ipiCst;
                 $clEnq = $nfeProdutoImpostoIpi->getClEnq();
                 $cnpjProd = $nfeProdutoImpostoIpi->getCnpjProd();
                 $cSelo = $nfeProdutoImpostoIpi->getCSelo();
@@ -1003,7 +1040,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             
             $pDevol = $nfeProduto->getPDevol();
             $vIPIDevol = $nfeProduto->getVIpiDevol();
-            $resposta = $nfeCriarXML->tagimpostoDevol($nItem, $pDevol, $vIPIDevol);
+            if($pDevol && $vIPIDevol) {
+               $resposta = $nfeCriarXML->tagimpostoDevol($nItem, $pDevol, $vIPIDevol); 
+            }
             
             $texto = $nfeProduto->getInfAdProd();
             $resposta = $nfeCriarXML->taginfAdProd($nItem, $texto );
@@ -1019,7 +1058,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $vFreteTot = $nfe->getVFrete();
         $vSegTot = $nfe->getVSeg(); 
         $vDescTot = $nfe->getVDesc(); 
-        $vIITot = $nfe->getVII(); 
+        $vIITot = $nfe->getVLl(); 
         $vIPITot = $nfe->getVIpi(); 
         $vPISTot = $nfe->getVPis();
         $vCOFINSTot = $nfe->getVCofins(); 
@@ -1041,17 +1080,50 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $vDescCondIss = $nfe->getVDescCond(); 
         $vISSRetIss = $nfe->getVIssRet(); 
         $cRegTribIss = $nfe->getCRegTrib(); 
-        $resposta = $nfeCriarXML->tagISSQNTot($vServIss, $vBCIss, $vISS, $vPISIss, $vCOFINSIss, $dCompetIss, $vDeducaoIss, $vOutroIss, $vDescIncondIss, $vDescCondIss, $vISSRetIss, $cRegTribIss);
+        if($dCompetIss) {
+            $resposta = $nfeCriarXML->tagISSQNTot($vServIss, $vBCIss, $vISS, $vPISIss, $vCOFINSIss, $dCompetIss, $vDeducaoIss, $vOutroIss, $vDescIncondIss, $vDescCondIss, $vISSRetIss, $cRegTribIss);
+        }
         
         //retTrib
-        $vRetPIS = $nfe->getVRetPis(); 
-        $vRetCOFINS = $nfe->getVRetCofins(); 
-        $vRetCSLL = $nfe->getVRetCsll(); 
-        $vBCIRRF = $nfe->getVBcIrrf(); 
-        $vIRRF = $nfe->getVIrrf(); 
-        $vBCRetPrev = $nfe->getVBcRetPrev(); 
-        $vRetPrev = $nfe->getVRetPrev(); 
-        $resposta = $nfeCriarXML->tagretTrib($vRetPIS, $vRetCOFINS, $vRetCSLL, $vBCIRRF, $vIRRF, $vBCRetPrev, $vRetPrev);
+        $vRetPIS = null;
+        $vRetCOFINS = null;
+        $vRetCSLL = null;
+        $vBCIRRF = null;
+        $vIRRF = null;
+        $vBCRetPrev = null;
+        $vRetPrev = null;
+        $temRetencao = false;
+        if($nfe->getVRetPis() != '0.00') {
+            $vRetPIS = $nfe->getVRetPis();
+            $temRetencao = true;
+        }
+        if($nfe->getVRetCofins() != '0.00') {
+            $vRetCOFINS = $nfe->getVRetCofins(); 
+            $temRetencao = true;
+        }
+        if($nfe->getVRetCsll() != '0.00') {
+            $vRetCSLL = $nfe->getVRetCsll();
+            $temRetencao = true;
+        }
+        if($nfe->getVBcIrrf() != '0.00') {
+            $vBCIRRF = $nfe->getVBcIrrf(); 
+            $temRetencao = true;
+        }
+        if($nfe->getVIrrf() != '0.00') {
+            $vIRRF = $nfe->getVIrrf();
+            $temRetencao = true;
+        }
+        if($nfe->getVBcRetPrev() != '0.00') {
+            $vBCRetPrev = $nfe->getVBcRetPrev(); 
+            $temRetencao = true;
+        }
+        if($nfe->getVRetPrev() != '0.00') {
+            $vRetPrev = $nfe->getVRetPrev();
+            $temRetencao = true;
+        }
+        if($temRetencao) {
+            $resposta = $nfeCriarXML->tagretTrib($vRetPIS, $vRetCOFINS, $vRetCSLL, $vBCIRRF, $vIRRF, $vBCRetPrev, $vRetPrev);
+        }
         
         //frete
         $modFrete = $nfe->getTransModFrete(); //0=Por conta do emitente; 1=Por conta do destinatário/remetente; 2=Por conta de terceiros;
@@ -1068,19 +1140,45 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $resposta = $nfeCriarXML->tagtransporta($CNPJTrans, $CPFTrans, $xNomeTrans, $IETrans, $xEnderTrans, $xMunTrans, $UFTrans);
 
         //valores retidos para transporte
-        $vServTrans = $nfe->getTrans_v_serv(); //Valor do Serviço
-        $vBCRetTrans = $nfe->getTrans_v_bcRet(); //BC da Retenção do ICMS
-        $pICMSRetTrans = $nfe->getTrans_p_icmsRet(); //Alíquota da Retenção
-        $vICMSRetTrans = $nfe->getTrans_v_icmsRet(); //Valor do ICMS Retido
-        $CFOPTrans = $nfe->getTransCfop();
-        $cMunFGTrans = $nfe->getTrans_c_munFg(); //Código do município de ocorrência do fato gerador do ICMS do transporte
-        $resposta = $nfeCriarXML->tagretTransp($vServTrans, $vBCRetTrans, $pICMSRetTrans, $vICMSRetTrans, $CFOPTrans, $cMunFGTrans);
-
+        $vServTrans = null;
+        $vBCRetTrans = null;
+        $pICMSRetTrans = null;
+        $vICMSRetTrans = null;
+        $CFOPTrans = null;
+        $cMunFGTrans = null;
+        $temRetencaoTransp = false;
+        if($nfe->getTrans_v_serv() != '0.00') {
+            $vServTrans = $nfe->getTrans_v_serv();
+            $temRetencaoTransp = true;
+        }
+        if($nfe->getTrans_v_bcRet() != '0.00') {
+            $vBCRetTrans = $nfe->getTrans_v_bcRet();
+            $temRetencaoTransp = true;
+        }
+        if($nfe->getTrans_p_icmsRet() != '0.0000') {
+            $pICMSRetTrans = $nfe->getTrans_p_icmsRet();
+            $temRetencaoTransp = true;
+        }
+        if($nfe->getTrans_v_icmsRet() != '0.00') {
+            $vICMSRetTrans = $nfe->getTrans_v_icmsRet();
+            $temRetencaoTransp = true;
+        }
+        if($nfe->getTransCfop() != '0') {
+            $CFOPTrans = $nfe->getTransCfop();
+            $temRetencaoTransp = true;
+        }
+        if($temRetencaoTransp) {
+            $cMunFGTrans = $nfe->getTrans_c_munFg();
+            $resposta = $nfeCriarXML->tagretTransp($vServTrans, $vBCRetTrans, $pICMSRetTrans, $vICMSRetTrans, $CFOPTrans, $cMunFGTrans);
+        }
+        
         //Dados dos veiculos de transporte
         $placaTrans =  $nfe->getTransPlaca();
         $UFVeic = $nfe->getTransVeicUf();
         $RNTCTrans = $nfe->getTransRntc();
-        $resposta = $nfeCriarXML->tagveicTransp($placaTrans, $UFVeic, $RNTCTrans);
+        if($placaTrans && $UFVeic) {
+           $resposta = $nfeCriarXML->tagveicTransp($placaTrans, $UFVeic, $RNTCTrans); 
+        }
 
         // Reboques Transporte
         if($nfe->getTransTemReboque() == '1') {
@@ -1103,14 +1201,17 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     ->addFieldToFilter('nfe_id', $nfeId)
                     ->addFieldToFilter('tipo_informacao', 'vol');
             foreach($volumeCollection as $volumeModel) {
+                $lacresVol = array();
                 $qVol = $volumeModel->getQVol(); //Quantidade de volumes transportados
                 $espVol = $volumeModel->getEsp(); //Espécie dos volumes transportados
                 $marcaVol = $volumeModel->getMarca(); //Marca dos volumes transportados
                 $nVol = $volumeModel->getNVol(); //Numeração dos volume
                 $pesoLVol = $volumeModel->getPesoL();
                 $pesoBVol = $volumeModel->getPesoB();
-                $aLacresVol = $volumeModel->getNLacre();
-                $resposta = $nfeCriarXML->tagvol($qVol, $espVol, $marcaVol, $nVol, $pesoLVol, $pesoBVol, array($aLacresVol));
+                if($volumeModel->getNLacre()) {
+                    $lacresVol = $volumeModel->getNLacre();
+                }
+                $resposta = $nfeCriarXML->tagvol($qVol, $espVol, $marcaVol, $nVol, $pesoLVol, $pesoBVol, $lacresVol);
             }
         }
         
@@ -1124,11 +1225,30 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
          */
         
         //dados da fatura
-        $nFatCob = $nfe->getCob_n_fat();
-        $vOrigCob = $nfe->getCob_v_orig();
-        $vDescCob = $nfe->getCob_v_desc();
-        $vLiqCob = $nfe->getCob_v_liq();
-        $resposta = $nfeCriarXML->tagfat($nFatCob, $vOrigCob, $vDescCob, $vLiqCob);
+        $nFatCob = null;
+        $vOrigCob = null;
+        $vDescCob = null;
+        $vLiqCob = null;
+        $temFatura = false;
+        if($nfe->getCob_n_fat()) {
+            $nFatCob = $nfe->getCob_n_fat();
+            $temFatura = true;
+        }
+        if($nfe->getCob_v_orig() != '0.00') {
+            $vOrigCob = $nfe->getCob_v_orig();
+            $temFatura = true;
+        }
+        if($nfe->getCob_v_desc() != '0.00') {
+            $vDescCob = $nfe->getCob_v_desc();
+            $temFatura = true;
+        }
+        if($nfe->getCob_v_liq() != '0.00') {
+            $vLiqCob = $nfe->getCob_v_liq();
+            $temFatura = true;
+        }
+        if($temFatura) {
+            $resposta = $nfeCriarXML->tagfat($nFatCob, $vOrigCob, $vDescCob, $vLiqCob);
+        }
 
         // Cobran�as
         $cobrancaCollection = Mage::getModel('nfe/nfecobranca')->getCollection()
@@ -1148,7 +1268,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         //observações emitente
         $xCampoInf = $nfe->getInf_x_campo();
         $xTextoInf = $nfe->getInf_x_texto();
-        $resposta = $nfeCriarXML->tagobsCont($xCampoInf, $xTextoInf);
+        if($xTextoInf) {
+            $resposta = $nfeCriarXML->tagobsCont($xCampoInf, $xTextoInf);
+        }
 
         /*
         //observações fisco
@@ -1160,7 +1282,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         //Dados do processo
         $nProcInf = $nfe->getInf_n_proc();
         $indProcInf = $nfe->getInfIndProc();
-        $resposta = $nfeCriarXML->tagprocRef($nProcInf, $indProcInf);
+        if($nProcInf && $indProcInf) {
+           $resposta = $nfeCriarXML->tagprocRef($nProcInf, $indProcInf); 
+        }
 
         //dados exportação
         if($nfe->getTemExportacao() == '1') {
@@ -1208,6 +1332,16 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $doc->save($caminho.$idTag.'.xml');
     }
     
+    private function getXmlNfe($nfe) {
+        if($nfe->getTpNf() == '0') {
+            $tipo = 'entrada';
+        } else {
+            $tipo = 'saida';
+        }
+        $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag().'.xml';
+        return $xml; 
+    }
+    
     private function getFormaPagamento($order) {
         $indPag = null;
         if($order->getPayment()->getMethodInstance()->getCode() == 'Maxima_Cielo_Cc') {
@@ -1234,7 +1368,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     }
     
     public function gerarCodigoNumerico($length=8) {
-        $numero = '';
+        $numero = null;
         for ($x=0;$x<$length;$x++){
             $numero .= rand(0,9);
         }
@@ -1283,4 +1417,171 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             }
         }
     }
+    
+    /**
+     * M�todo pertence a classe ToolsNFePHP.class.php do projeto NFE-PHP
+     * signXML
+     * Assinador TOTALMENTE baseado em PHP para arquivos XML
+     * este assinador somente utiliza comandos nativos do PHP para assinar
+     * os arquivos XML
+     *
+     * @name signXML
+     * @param  mixed $docxml Path para o arquivo xml ou String contendo o arquivo XML a ser assinado
+     * @param  string $tagid TAG do XML que devera ser assinada
+     * @return mixed false se houve erro ou string com o XML assinado
+     */
+    private function assinarXml($docxml, $tagid = '', $nfe) {
+        $msg = 'sucesso';
+        try {
+            $nfeTools = Mage::Helper('nfe/nfeTools');
+            $certificado = $nfeTools->pLoadCerts();
+            if($certificado['retorno'] != 'sucesso') {
+                return $certificado['retorno'];
+            }
+            if ($tagid == '') {
+                $msg = "Uma tag deve ser indicada para que seja assinada!!";
+                return $msg;
+            }
+            if ($docxml == '') {
+                $msg = "Um xml deve ser passado para que seja assinado!!";
+                return $msg;
+            }
+            if (! is_file($certificado['priKey'])) {
+                $msg = "Arquivo da chave privada parece invalido, verifique!!";
+                return $msg;
+            }
+            if (is_file($docxml)) {
+                $xml = file_get_contents($docxml);
+            } else {
+                $xml = $docxml;
+            }
+            //obter a chave privada para a assinatura
+            //modificado para permitir a leitura de arquivos maiores
+            //que o normal que é cerca de 2kBytes.
+            if (! $filep = fopen($certificado['priKey'], "r")) {
+                $msg = "Erro ao ler arquivo da chave privada!!";
+                return $msg;
+            }
+            $priv_key = '';
+            while (! feof($filep)) {
+                $priv_key .= fread($filep, 8192);
+            }
+            fclose($filep);
+            $pkeyid = openssl_get_privatekey($priv_key);
+            //limpeza do xml com a retirada dos CR, LF e TAB
+            $order = array("\r\n", "\n", "\r", "\t");
+            $replace = '';
+            $xml = str_replace($order, $replace, $xml);
+            // Habilita a manipulaçao de erros da libxml
+            libxml_use_internal_errors(true);
+            //limpa erros anteriores que possam estar em memória
+            libxml_clear_errors();
+            //carrega o documento DOM
+            $xmldoc = new DOMDocument('1.0', 'utf-8');
+            $xmldoc->preservWhiteSpace = false; //elimina espaços em branco
+            $xmldoc->formatOutput = false;
+            //é muito importante deixar ativadas as opçoes para limpar os espacos em branco
+            //e as tags vazias
+            if ($xmldoc->loadXML($xml, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG)) {
+                $root = $xmldoc->documentElement;
+            } else {
+                $msg = "Erro ao carregar XML, provavel erro na passagem do parâmetro docxml ou no próprio xml!!";
+                $errors = libxml_get_errors();
+                if (!empty($errors)) {
+                    $countI = 1;
+                    foreach ($errors as $error) {
+                        $msg .= "\n  [$countI]-".trim($error->message);
+                        $countI++;
+                    }
+                    libxml_clear_errors();
+                }
+                return $msg;
+            }
+            //extrair a tag com os dados a serem assinados
+            $node = $xmldoc->getElementsByTagName($tagid)->item(0);
+            if (!isset($node)) {
+                $msg = "A tag < $tagid > não existe no XML!!";
+                return $msg;
+            }
+            //extrai o atributo ID com o numero da NFe de 44 digitos
+            $Id = $node->getAttribute("Id");
+            //extrai e canoniza os dados da tag para uma string
+            $dados = $node->C14N(false, false, null, null);
+            //calcular o hash dos dados
+            $hashValue = hash('sha1', $dados, true);
+            //converte o valor para base64 para serem colocados no xml
+            $digValue = base64_encode($hashValue);
+            //monta a tag da assinatura digital
+            $Signature = $xmldoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+            $root->appendChild($Signature);
+            $SignedInfo = $xmldoc->createElement('SignedInfo');
+            $Signature->appendChild($SignedInfo);
+            //estabelece o método de canonização
+            $newNode = $xmldoc->createElement('CanonicalizationMethod');
+            $SignedInfo->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            //estabelece o método de assinatura
+            $newNode = $xmldoc->createElement('SignatureMethod');
+            $SignedInfo->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+            //indica a referencia da assinatura
+            $Reference = $xmldoc->createElement('Reference');
+            $SignedInfo->appendChild($Reference);
+            $Reference->setAttribute('URI', '#'.$Id);
+            //estabelece as tranformações
+            $Transforms = $xmldoc->createElement('Transforms');
+            $Reference->appendChild($Transforms);
+            $newNode = $xmldoc->createElement('Transform');
+            $Transforms->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+            $newNode = $xmldoc->createElement('Transform');
+            $Transforms->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            //estabelece o método de calculo do hash
+            $newNode = $xmldoc->createElement('DigestMethod');
+            $Reference->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            //carrega o valor do hash
+            $newNode = $xmldoc->createElement('DigestValue', $digValue);
+            $Reference->appendChild($newNode);
+            //extrai e canoniza os dados a serem assinados para uma string
+            $dados = $SignedInfo->C14N(false, false, null, null);
+            //inicializa a variavel que irá receber a assinatura
+            $signature = '';
+            //executa a assinatura digital usando o resource da chave privada
+            openssl_sign($dados, $signature, $pkeyid);
+            //codifica assinatura para o padrão base64
+            $signatureValue = base64_encode($signature);
+            //insere o valor da assinatura digtal
+            $newNode = $xmldoc->createElement('SignatureValue', $signatureValue);
+            $Signature->appendChild($newNode);
+            //insere a chave publica usada para conferencia da assinatura digital
+            $KeyInfo = $xmldoc->createElement('KeyInfo');
+            $Signature->appendChild($KeyInfo);
+            //X509Data
+            $X509Data = $xmldoc->createElement('X509Data');
+            $KeyInfo->appendChild($X509Data);
+            //carrega o certificado sem as tags de inicio e fim
+            $cert = $nfeTools->pCleanCerts($certificado['pubKey']);
+            //X509Certificate
+            $newNode = $xmldoc->createElement('X509Certificate', $cert);
+            $X509Data->appendChild($newNode);
+            //grava em uma string o objeto DOM
+            $xml = $xmldoc->saveXML();
+            //libera a chave privada da memoria
+            openssl_free_key($pkeyid);
+            // Salva o XML
+            if($nfe->getTpNf() == '0') {
+                $tipo = 'entrada';
+            } else {
+                $tipo = 'saida';
+            }
+            $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS;
+            $this->salvarXml($xml, $caminho, $nfe->getIdTag());
+        } catch (Exception $e) {
+            Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            return false;
+        }
+        return 'sucesso';
+    } //fim signXML
 }
