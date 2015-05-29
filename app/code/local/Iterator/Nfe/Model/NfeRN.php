@@ -748,6 +748,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()
                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId));
         foreach($nfeProdutos as $nfeProduto) {
+            $EXTIPI = null;
             $vFrete = null;
             $vSeg = null;
             $vDesc = null;
@@ -759,7 +760,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $xProd = $nfeProduto->getXProd();
             $NCM = $nfeProduto->getNcm();
             $NVE = $nfeProduto->getNve();
-            $EXTIPI = $nfeProduto->getExtipi();
+            if($nfeProduto->getExtipi() != '000') {
+                $EXTIPI = $nfeProduto->getExtipi();
+            }
             $CFOP = $nfeProduto->getCfop();
             $uCom = $nfeProduto->getUCom();
             $qCom = $nfeProduto->getQCom();
@@ -1005,16 +1008,28 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 if(strlen($ipiCst) == 1) {
                     $ipiCst = '0'.$nfeProdutoImpostoIpi->getCst();
                 }
+                $vBC = null;
+                $pIPI = null;
+                $qUnid = null;
+                $vUnid = null;
                 $cst = $ipiCst;
                 $clEnq = $nfeProdutoImpostoIpi->getClEnq();
                 $cnpjProd = $nfeProdutoImpostoIpi->getCnpjProd();
                 $cSelo = $nfeProdutoImpostoIpi->getCSelo();
                 $qSelo = $nfeProdutoImpostoIpi->getQSelo();
                 $cEnq = $nfeProdutoImpostoIpi->getCEnq();
-                $vBC = $nfeProdutoImpostoIpi->getVBc();
-                $pIPI = $nfeProdutoImpostoIpi->getPIpi();
-                $qUnid = $nfeProdutoImpostoIpi->getQUnid();
-                $vUnid = $nfeProdutoImpostoIpi->getVUnid();
+                if($nfeProdutoImpostoIpi->getVBc()) {
+                    $vBC = $nfeProdutoImpostoIpi->getVBc();
+                }
+                if($nfeProdutoImpostoIpi->getPIpi()) {
+                    $pIPI = $nfeProdutoImpostoIpi->getPIpi();
+                }
+                if($nfeProdutoImpostoIpi->getQUnid() != '0.000') {
+                    $qUnid = $nfeProdutoImpostoIpi->getQUnid();
+                }
+                if($nfeProdutoImpostoIpi->getVUnid() != '0.000') {
+                    $vUnid = $nfeProdutoImpostoIpi->getVUnid();
+                }
                 $vIPI = $nfeProdutoImpostoIpi->getVIpi();
                 $resposta = $nfeCriarXML->tagIPI($nItem, $cst, $clEnq, $cnpjProd, $cSelo, $qSelo, $cEnq, $vBC, $pIPI, $qUnid, $vUnid, $vIPI);
             }
