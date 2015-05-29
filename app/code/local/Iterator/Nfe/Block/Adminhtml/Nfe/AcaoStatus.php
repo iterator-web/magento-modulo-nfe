@@ -52,7 +52,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_AcaoStatus extends Mage_Adminhtml_Block_W
                 $descricao = '<strong style="color:#000000;">AUTORIZADO</strong>';
                 break;
             case 4:
-                $descricao = '<strong style="color:#7b3c20;">ERRO</strong>';
+                $descricao = utf8_encode('<strong style="color:#7b3c20;">AGUARDANDO CORREÇÃO</strong>');
                 break;
             case 5:
                 $descricao = '<strong style="color:#c1a0a0;">AGUARDANDO CANCELAMENTO</strong>';
