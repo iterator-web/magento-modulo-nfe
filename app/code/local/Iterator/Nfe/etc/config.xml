@@ -43,6 +43,9 @@
                     <nferange>
                         <table>iterator_nfe_range</table>
                     </nferange>
+                    <nferetorno>
+                        <table>iterator_nfe_retorno</table>
+                    </nferetorno>
                     <nfemunicipio>
                         <table>iterator_nfe_municipio</table>
                     </nfemunicipio>

@@ -7,6 +7,7 @@
             </action>
         </reference>
         <reference name="content">
+            <block type="nfe/adminhtml_painelretornos" name="nfe_painelretornos" ></block>
             <block type="nfe/adminhtml_nfe" name="nfe" />
         </reference>
     </adminhtml_nfe_index>

@@ -488,6 +488,12 @@ $installer->run(utf8_encode("
     PRIMARY KEY (`range_id`))
   ENGINE = InnoDB DEFAULT CHARSET=utf8;
   
+  CREATE TABLE IF NOT EXISTS `{$installer->getTable('nfe/nferetorno')}` (
+    `retorno_id` TINYINT(1) UNSIGNED NOT NULL,
+    `retorno_mensagem` VARCHAR(255) NULL,
+    PRIMARY KEY (`retorno_id`))
+  ENGINE = InnoDB DEFAULT CHARSET=utf8;
+  
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfemunicipio')}` (
     `municipio_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
     `ibge_uf` INT(2) UNSIGNED NOT NULL,
