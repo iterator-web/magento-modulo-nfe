@@ -40,6 +40,7 @@ $installer->run(utf8_encode("
   CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfe')}` (
     `nfe_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
     `pedido_increment_id` VARCHAR(18) NULL,
+    `n_rec` VARCHAR(60) NULL,
     `ver_aplic` VARCHAR(60) NULL,
     `dh_recbto` DATETIME NULL,
     `n_prot` VARCHAR(15) NULL,
