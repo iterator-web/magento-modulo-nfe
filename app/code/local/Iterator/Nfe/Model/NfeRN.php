@@ -518,14 +518,15 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     
     public function gerarXML($nfeId) {
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+        $nfeTools = Mage::Helper('nfe/nfeTools');
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
         $this->preencherCampos($nfe, $nfeCriarXML);
         $retornoXml = $this->gerarArquivoXML($nfe, $nfeCriarXML);
         if($retornoXml == 'sucesso') {
-            $xmlNfe = $this->getXmlNfe($nfe);
+            $xmlNfe = $nfeTools->getXmlNfe($nfe);
             $xmlAssinado = $this->assinarXml($xmlNfe, 'infNFe', $nfe);
             if($xmlAssinado == 'sucesso') {
-                $xmlNfe = $this->getXmlNfe($nfe);
+                $xmlNfe = $nfeTools->getXmlNfe($nfe);
                 $xmlValidado = $this->validarXml($xmlNfe);
                 if($xmlValidado == 'sucesso') {
                     return 'sucesso';
@@ -1351,16 +1352,6 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $doc->formatOutput = true;
         $doc->loadXML($xmlNfe);
         $doc->save($caminho.$idTag.'.xml');
-    }
-    
-    private function getXmlNfe($nfe) {
-        if($nfe->getTpNf() == '0') {
-            $tipo = 'entrada';
-        } else {
-            $tipo = 'saida';
-        }
-        $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag().'.xml';
-        return $xml; 
     }
     
     private function getFormaPagamento($order) {
