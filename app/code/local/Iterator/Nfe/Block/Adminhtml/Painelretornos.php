@@ -41,14 +41,14 @@ class Iterator_Nfe_Block_Adminhtml_Painelretornos extends Mage_Adminhtml_Block_W
     }
     
     public function getRetorno() {
-        $mensagemRetorno = null;
+        $retornoMensagem = null;
         $retorno = Mage::getModel('nfe/nferetorno')->load('1');
-        if($retorno->getMensagemRetorno()) {
-            $mensagemRetorno = $retorno->getMensagemRetorno();
+        if($retorno->getRetornoMensagem()) {
+            $retornoMensagem = utf8_decode($retorno->getRetornoMensagem());
         } else {
-            $mensagemRetorno = 'Ainda não foram registrados envios de NF-e para serem autorizadas pelo SEFAZ.';
+            $retornoMensagem = 'Ainda não foram registrados envios de NF-e para serem autorizadas pelo SEFAZ.';
         }
-        return $mensagemRetorno;
+        return $retornoMensagem;
     }
 }
 ?>

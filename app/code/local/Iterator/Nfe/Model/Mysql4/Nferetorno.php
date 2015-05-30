@@ -36,5 +36,6 @@ class Iterator_Nfe_Model_Mysql4_NfeRetorno extends Mage_Core_Model_Mysql4_Abstra
 
     protected function _construct() {
         $this->_init('nfe/nferetorno', 'retorno_id');
+        $this->_isPkAutoIncrement = false;
     }
 }
