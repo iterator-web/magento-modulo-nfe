@@ -162,7 +162,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
         
         $this->addColumn('dh_recbto',
             array(
-                'header'=> $this->__(utf8_encode('Data Aprovação')),
+                'header'=> $this->__(utf8_encode('Data Autorização')),
                 'width'     => '150px',
                 'index' => 'dh_recbto',
                 'filter_index' => 'dh_recbto',
