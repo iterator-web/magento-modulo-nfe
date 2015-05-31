@@ -639,6 +639,327 @@ class Iterator_Nfe_Helper_NfeTools extends Mage_Core_Helper_Abstract {
     }// fim autoriza
     
     /**
+     * getProtocol
+     * Solicita resposta do lote de Notas Fiscais ou o protocolo de
+     * autorizaÃ§Ã£o da NFe
+     * Caso $this->cStat == 105 Tentar novamente mais tarde
+     *
+     * @name getProtocol
+     * @param  string   $recibo numero do recibo do envio do lote
+     * @param  string   $chave  numero da chave da NFe de 44 digitos
+     * @param   string   $tpAmb  numero do ambiente 1-producao e 2-homologaÃ§Ã£o
+     * @param   array    $aRetorno Array com os dados do protocolo
+     * @return mixed    false ou xml do retorno do webservice
+     */
+    public function getProtocol($recibo = '', $chave = '', $tpAmb = '', &$aRetorno = array(), $siglaUF, $cUF)
+    {
+        $protocolo = array();
+        try {
+            //carrega defaults do array de retorno
+            $aRetorno = array(
+                'bStat'=>false,
+                'verAplic'=>'',
+                'cStat'=>'',
+                'xMotivo'=>'',
+                'cUF'=>'',
+                'chNFe'=>'',
+                'aProt'=>'',
+                'aCanc'=>'',
+                'xmlRetorno'=>'');
+            /*
+            if ($tpAmb == '') {
+                $tpAmb = $this->tpAmb;
+            }
+            if (!in_array($tpAmb, array(self::AMBIENTE_PRODUCAO, self::AMBIENTE_HOMOLOGACAO))) {
+                $tpAmb = self::AMBIENTE_HOMOLOGACAO;
+            }
+             */
+            if (!$aURL = $this->pLoadSEFAZ($tpAmb, $siglaUF)) {
+                $msg = "Erro no carregamento das informacoes da SEFAZ";
+                $protocolo['retorno'] = $msg;
+                return $protocolo;
+            }
+            $ctpEmissao = '';
+            //verifica se a chave foi passada
+            if ($chave != '') {
+                //se sim extrair o cUF da chave
+                $cUF = substr($chave, 0, 2);
+                $ctpEmissao = substr($chave, 34, 1);
+                /*
+                //testar para ver se Ã© o mesmo do emitente
+                if ($cUF != $this->cUF || $tpAmb != $this->tpAmb) {
+                    //se nÃ£o for o mesmo carregar a sigla
+                    $siglaUF = $this->siglaUFList[$cUF];
+                    //recarrega as url referentes aos dados passados como parametros para a funÃ§Ã£o
+                    $aURL = $this->pLoadSEFAZ($tpAmb, $siglaUF);
+                }
+                 */
+            }
+            //verifica se alguma SVC esta habilitada
+            if ($this->enableSVCAN) {
+                $aURL = $this->pLoadSEFAZ($tpAmb, self::CONTINGENCIA_SVCAN);
+            } elseif ($this->enableSVCRS) {
+                $aURL = $this->pLoadSEFAZ($tpAmb, self::CONTINGENCIA_SVCRS);
+            }
+            if ($recibo == '' && $chave == '') {
+                $protocolo['retorno'] = "ERRO. Favor indicar o numero do recibo ou a chave de acesso da NF-e.";
+                return $protocolo;
+            }
+            if ($recibo != '' && $chave != '') {
+                $protocolo['retorno'] = "ERRO. Favor indicar somente o numero do recibo ou a chave de acesso da NF-e.";
+                return $protocolo;
+            }
+            //consulta pelo recibo
+            if ($recibo != '' && $chave == '') {
+                //buscar os protocolos pelo numero do recibo do lote
+                //identificação do serviço
+                $servico = 'NfeRetAutorizacao';
+                //recuperação da versão
+                $versao = $aURL[$servico]['version'];
+                //recuperação da url do serviço
+                $urlservico = $aURL[$servico]['URL'];
+                //recuperação do método
+                $metodo = $aURL[$servico]['method'];
+                //montagem do namespace do serviço
+                $namespace = $this->URLPortal.'/wsdl/'.$servico;
+                //montagem do cabeçalho da comunicação SOAP
+                $cabec = "<nfeCabecMsg xmlns=\"$namespace\">"
+                        . "<cUF>$cUF</cUF>"
+                        . "<versaoDados>$versao</versaoDados>"
+                        . "</nfeCabecMsg>";
+                //montagem dos dados da mensagem SOAP
+                $dados = "<nfeDadosMsg xmlns=\"$namespace\">"
+                        . "<consReciNFe xmlns=\"$this->URLPortal\" versao=\"$versao\">"
+                        . "<tpAmb>$tpAmb</tpAmb>"
+                        . "<nRec>$recibo</nRec>"
+                        . "</consReciNFe>"
+                        . "</nfeDadosMsg>";
+                //nome do arquivo
+                $nomeArq = $recibo.'-protrec.xml';
+            }
+            //consulta pela chave
+            if ($recibo == '' && $chave != '') {
+                //buscar o protocolo pelo numero da chave de acesso
+                //identificação do serviço
+                $servico = 'NfeConsultaProtocolo';
+                //recuperação da versão
+                $versao = $aURL[$servico]['version'];
+                //recuperação da url do serviço
+                $urlservico = $aURL[$servico]['URL'];
+                //recuperação do método
+                $metodo = $aURL[$servico]['method'];
+                //montagem do namespace do serviço
+                $namespace = $this->URLPortal.'/wsdl/NfeConsulta2';
+                //montagem do cabeçalho da comunicação SOAP
+                $cabec = "<nfeCabecMsg xmlns=\"$namespace\">"
+                        . "<cUF>$cUF</cUF>"
+                        . "<versaoDados>$versao</versaoDados>"
+                        . "</nfeCabecMsg>";
+                //montagem dos dados da mensagem SOAP
+                $dados = "<nfeDadosMsg xmlns=\"$namespace\">"
+                        . "<consSitNFe xmlns=\"$this->URLPortal\" versao=\"$versao\">"
+                        . "<tpAmb>$tpAmb</tpAmb>"
+                        . "<xServ>CONSULTAR</xServ>"
+                        . "<chNFe>$chave</chNFe>"
+                        . "</consSitNFe></nfeDadosMsg>";
+            }
+            //envia a solicitaÃ§Ã£o via SOAP
+            if (!$retorno = $this->pSendSOAP($urlservico, $namespace, $cabec, $dados, $metodo, $tpAmb)) {
+                $protocolo['retorno'] = "Nao houve retorno Soap verifique a mensagem de erro e o debug.";
+                return $protocolo;
+            }
+            //tratar dados de retorno
+            $doc = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+            $doc->formatOutput = false;
+            $doc->preserveWhiteSpace = false;
+            $doc->loadXML($retorno['valor'], LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            $cStat = $this->pSimpleGetValue($doc, "cStat");
+            $xMotivo = $this->pSimpleGetValue($doc, "xMotivo");
+            //verifica se houve erro no cÃ³digo do status
+            if ($cStat == '') {
+                $protocolo['retorno'] = "Erro inesperado, cStat esta vazio.";
+                return $protocolo;
+            }
+            $envelopeBodyNode = $doc->getElementsByTagNameNS('http://www.w3.org/2003/05/soap-envelope', 'Body')->item(0)->childNodes->item(0);
+            //Disponibiliza o conteÃºdo xml do pacote de resposta (soap:Body) atravÃ©s do array de retorno
+            $aRetorno['xmlRetorno'] = $doc->saveXML($envelopeBodyNode);
+            //o retorno vai variar se for buscado o protocolo ou recibo
+            //Retorno da consulta pela Chave da NF-e
+            //retConsSitNFe 100 aceita 110 denegada 101 cancelada ou outro recusada
+            // cStat xMotivo cUF chNFe protNFe retCancNFe
+            if ($chave != '') {
+                $aRetorno['bStat'] = true;
+                $aRetorno['verAplic'] = $this->pSimpleGetValue($doc, 'verAplic');
+                $aRetorno['cStat'] = $this->pSimpleGetValue($doc, 'cStat');
+                $aRetorno['xMotivo'] = $this->pSimpleGetValue($doc, 'xMotivo');
+                $aRetorno['cUF'] = $this->pSimpleGetValue($doc, 'cUF');
+                $aRetorno['chNFe'] = $this->pSimpleGetValue($doc, 'chNFe');
+                $infProt = $doc->getElementsByTagName('infProt')->item(0);
+                $infCanc = $doc->getElementsByTagName('infCanc')->item(0);
+                $procEventoNFe = $doc->getElementsByTagName('procEventoNFe');
+                $aProt = array();
+                if (isset($infProt)) {
+                    foreach ($infProt->childNodes as $tnodes) {
+                        $aProt[$tnodes->nodeName] = $tnodes->nodeValue;
+                    }
+                    if (!empty($aProt['dhRecbto'])) {
+                        $aProt['dhRecbto'] = date("Y-m-d H:i:s", $this->pConvertTime($aProt['dhRecbto']));
+                    } else {
+                        $aProt['dhRecbto'] = '';
+                    }
+                    $aProt['xEvento'] = 'AutorizaÃ§Ã£o';
+                }
+                $aCanc = '';
+                if (isset($infCanc)) {
+                    foreach ($infCanc->childNodes as $tnodes) {
+                        $aCanc[$tnodes->nodeName] = $tnodes->nodeValue;
+                    }
+                    if (!empty($aCanc['dhRecbto'])) {
+                        $aCanc['dhRecbto'] = date("Y-m-d H:i:s", $this->pConvertTime($aCanc['dhRecbto']));
+                    } else {
+                        $aCanc['dhRecbto'] = '';
+                    }
+                    $aCanc['xEvento'] = 'Cancelamento';
+                }
+                $aEventos = '';
+                if (! empty($procEventoNFe)) {
+                    foreach ($procEventoNFe as $kEli => $evento) {
+                        $infEvento = $evento->getElementsByTagName('infEvento');
+                        foreach ($infEvento as $iE) {
+                            if ($iE->getElementsByTagName('detEvento')->item(0) != "") {
+                                continue;
+                            }
+                            foreach ($iE->childNodes as $tnodes) {
+                                $aEventos[$kEli][$tnodes->nodeName] = $tnodes->nodeValue;
+                            }
+                            $aEventos[$kEli]['dhRegEvento'] = date("Y-m-d H:i:s", $this->pConvertTime($aEventos[$kEli]['dhRegEvento']));
+                        }
+                    }
+                }
+                $aRetorno['aProt'] = $aProt;
+                $aRetorno['aCanc'] = $aCanc;
+                $aRetorno['aEventos'] = $aEventos;
+                //gravar o retorno na pasta temp apenas se a nota foi aprovada ou denegada
+                if (in_array($aRetorno['cStat'], array('100', '101', '110', '301', '302'))) {
+                    $protocolo['retorno'] = 'sucesso';
+                    $protocolo['infProt'] = $aRetorno['aProt'];
+                    $protocolo['infProt']['cStat'] = $aRetorno['cStat'];
+                    $protocolo['aCanc'] = $aRetorno['aCanc'];
+                    $protocolo['aEventos'] = $aRetorno['aEventos'];
+                    /*
+                    //nome do arquivo
+                    $nomeArq = $chave.'-prot.xml';
+                    $nome = $this->temDir.$nomeArq;
+                    $nome = $doc->save($nome);
+                     */
+                } else {
+                    $protocolo['retorno'] = sprintf("%s - %s", $aRetorno['cStat'], $aRetorno['xMotivo']);
+                    return $protocolo;
+                }
+            }
+            //Retorno da consulta pelo recibo
+            //NFeRetRecepcao 104 tem retornos
+            //nRec cStat xMotivo cUF cMsg xMsg protNfe* infProt chNFe dhRecbto nProt cStat xMotivo
+            if ($recibo != '') {
+                $countI = 0;
+                $aRetorno['bStat'] = true;
+                // status do serviÃ§o
+                $aRetorno['cStat'] = $this->pSimpleGetValue($doc, 'cStat');
+                // motivo da resposta (opcional)
+                $aRetorno['xMotivo'] = $this->pSimpleGetValue($doc, 'xMotivo');
+                // numero do recibo consultado
+                $aRetorno['nRec'] = $this->pSimpleGetValue($doc, 'nRec');
+                // tipo de ambiente
+                $aRetorno['tpAmb'] = $this->pSimpleGetValue($doc, 'tpAmb');
+                // versao do aplicativo que recebeu a consulta
+                $aRetorno['verAplic'] = $this->pSimpleGetValue($doc, 'verAplic');
+                // codigo da UF que atendeu a solicitacao
+                $aRetorno['cUF'] = $this->pSimpleGetValue($doc, 'cUF');
+                // codigo da mensagem da SEFAZ para o emissor (opcional)
+                $aRetorno['cMsg'] = $this->pSimpleGetValue($doc, 'cMsg');
+                // texto da mensagem da SEFAZ para o emissor (opcional)
+                $aRetorno['xMsg'] = $this->pSimpleGetValue($doc, 'xMsg');
+                if ($cStat == '104') {
+                    //aqui podem ter varios retornos dependendo do numero de NFe enviadas no Lote e jÃ¡ processadas
+                    $protNfe = $doc->getElementsByTagName('protNFe');
+                    foreach ($protNfe as $d) {
+                        $infProt = $d->getElementsByTagName('infProt')->item(0);
+                        $protcStat = $infProt->getElementsByTagName('cStat')->item(0)->nodeValue;
+                        $protxMotivo = $infProt->getElementsByTagName('xMotivo')->item(0)->nodeValue;
+                        //pegar os dados do protolo para retornar
+                        foreach ($infProt->childNodes as $tnode) {
+                           $aProt[$tnode->nodeName] = $tnode->nodeValue;
+                        }
+                        $countI++;
+                        //incluido increment para controlador de indice do array
+                        //salvar o protocolo somente se a nota estiver approvada ou denegada
+                        if (in_array($protcStat, array('100', '110', '301', '302'))) {
+                            $protocolo['retorno'] = 'sucesso';
+                            $protocolo['infProt'] = $aProt;
+                            $protocolo['infProt']['cStat'] = $protcStat;
+                            /*
+                            $nomeprot = $this->temDir.$infProt->getElementsByTagName('chNFe')->item(0)->nodeValue.'-prot.xml';//id da nfe
+                            //salvar o protocolo em arquivo
+                            $novoprot = new DomDocumentNFePHP();
+                            $pNFe = $novoprot->createElement("protNFe");
+                            $pNFe->setAttribute("versao", "3.10");
+                            // Importa o node e todo o seu conteudo
+                            $node = $novoprot->importNode($infProt, true);
+                            // acrescenta ao node principal
+                            $pNFe->appendChild($node);
+                            $novoprot->appendChild($pNFe);
+                            $xml = $novoprot->saveXML();
+                            $xml = str_replace(
+                                '<?xml version="1.0" encoding="UTF-8  standalone="no"?>',
+                                '<?xml version="1.0" encoding="UTF-8"?>',
+                                $xml
+                            );
+                            $xml = str_replace(array("default:",":default","\r","\n","\s"), "", $xml);
+                            $xml = str_replace("  ", " ", $xml);
+                            $xml = str_replace("  ", " ", $xml);
+                            $xml = str_replace("  ", " ", $xml);
+                            $xml = str_replace("  ", " ", $xml);
+                            $xml = str_replace("  ", " ", $xml);
+                            $xml = str_replace("> <", "><", $xml);
+                            file_put_contents($nomeprot, $xml);
+                             */
+                        } else { 
+                            $protocolo['retorno'] = sprintf("%s - %s", $protcStat, $protxMotivo);
+                            return $protocolo;
+                        }//fim protcSat
+                    } //fim foreach
+                } else { 
+                    $protocolo['retorno'] = sprintf("%s - %s", $cStat, $xMotivo);
+                    return $protocolo;
+                }//fim cStat
+                //converter o horÃ¡rio do recebimento retornado pela SEFAZ em formato padrÃ£o
+                if (isset($aProt)) {
+                    foreach ($aProt as &$p) {
+                        $p['dhRecbto'] = !empty($p['dhRecbto']) ?
+                            date(
+                                "Y-m-d H:i:s",
+                                $this->pConvertTime($p['dhRecbto'])
+                            ) : '';
+                    }
+                } else {
+                    $aProt = array();
+                }
+                
+                $aRetorno['aProt'] = $aProt; //passa o valor de $aProt para o array de retorno
+                /*
+                $nomeArq = $recibo.'-recprot.xml';
+                $nome = $this->temDir.$nomeArq;
+                $nome = $doc->save($nome);
+                 */
+            } //fim recibo
+        } catch (Exception $e) {
+            Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            return false;
+        } //fim catch
+        return $protocolo;
+    } //fim getProtocol
+    
+    /**
      * addProt
      * Adiciona a tag do protocolo a NFe, preparando a mesma para impressÃ£o e envio ao destinatÃ¡rio.
      * TambÃ©m pode ser usada para substituir o protocolo de autorizaÃ§Ã£o

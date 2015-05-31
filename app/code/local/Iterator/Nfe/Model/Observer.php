@@ -48,7 +48,51 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
             } else if($nfe->getStatus() == '3') {
                 
             } else if($nfe->getStatus() == '2') {
-                
+                $nfeTools = Mage::Helper('nfe/nfeTools');
+                $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+                $aRetorno = array();
+                if($nfe->getNRec() && strpos($nfe->getMensagem(),'Erro: 204') === false) {
+                    $protocolo = $nfeTools->getProtocol($nfe->getNRec(), '', $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf());
+                } else {
+                    $protocolo = $nfeTools->getProtocol('', substr($nfe->getIdTag(),3), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(),$nfe->getCUf());
+                }
+                if($protocolo['retorno'] == 'sucesso') {
+                    $nfe->setVerAplic($protocolo['infProt']['verAplic']);
+                    $nfe->setDhRecbto($protocolo['infProt']['dhRecbto']);
+                    $nfe->setNProt($protocolo['infProt']['nProt']);
+                    $nfe->setDigVal($protocolo['infProt']['digVal']);
+                    $nfe->setCStat($protocolo['infProt']['cStat']);
+                    $nfe->setXMotivo($protocolo['infProt']['xMotivo']);
+                    $xmlNfe = $nfeTools->getXmlNfe($nfe);
+                    $xmlProtocolado = $nfeTools->addProt($xmlNfe, $protocolo['infProt'], $nfe->getVersao(), 'protNFe');
+                    if($xmlProtocolado['retorno'] == 'sucesso') {
+                        $this->salvarXml($xmlProtocolado['xml'], $nfe);
+                        $nfe->setStatus('3');
+                        $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
+                        $nfe->save();
+                    } else {
+                        $nfe->setStatus('2');
+                        $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
+                        $nfe->save();
+                        $this->setRetorno(utf8_encode('A fila de envios teve problemas durante a protocolação da NF-e número: '.$nfe->getNNf(). '. O problema relatado: '.utf8_decode($xmlProtocolado['retorno'])));
+                        $enviosSucesso = false;
+                    }
+                } else {
+                    if(strpos($protocolo['retorno'],'204') !== false || strpos($protocolo['retorno'],'656') !== false) {
+                        $nfe->setStatus('2');
+                        $nfe->setMensagem(utf8_encode('Aguardando para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));
+                    } else if(strpos($protocolo['retorno'],'110') !== false || strpos($protocolo['retorno'],'205') !== false || strpos($protocolo['retorno'],'233') !== false || 
+                            strpos($protocolo['retorno'],'234') !== false || strpos($protocolo['retorno'],'301') !== false || strpos($protocolo['retorno'],'302') !== false) {
+                        $nfe->setStatus('8');
+                        $nfe->setMensagem(utf8_encode('A utilização da NF-e foi denegada. Erro: '.utf8_decode($protocolo['retorno'])));
+                    } else {
+                        $nfe->setStatus('4');
+                        $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));
+                    }
+                    $nfe->save();
+                    $this->setRetorno(utf8_encode('A fila de envios teve problemas durante o envio da NF-e número: '.$nfe->getNNf(). '. O problema relatado: '.utf8_decode($protocolo['retorno'])));
+                    $enviosSucesso = false;
+                }
             } else if($nfe->getStatus() == '1') {
                 $indSinc = 0;
                 $nfeTools = Mage::Helper('nfe/nfeTools');
