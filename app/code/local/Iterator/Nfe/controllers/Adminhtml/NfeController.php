@@ -137,7 +137,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $msgErro = utf8_encode('A data de emissão da NF-e não é válida.');
                 }
                 $dhSaiEntOrginal = str_replace('/', '-', $postData['nfe']['dh_sai_ent']);
-                $dhSaiEnt = substr($dhEmiOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
+                $dhSaiEnt = substr($dhSaiEntOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
                 if (!$validarCampos->validateDate(substr($dhSaiEnt,0,8), 'YYYY-MM-DD')) {
                     $erro = true;
                     $msgErro = utf8_encode('A data de entrada/saída da NF-e não é válida.');
@@ -161,6 +161,12 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 $cMunFG = $nfeMunicipio->getIbgeUf().$nfeMunicipio->getCodigo();
                 $xMun = $nfeMunicipio->getNome();
                 $nfeRN = Mage::getModel('nfe/nfeRN');
+                $ambiente = Mage::getStoreConfig('nfe/nfe_opcoes/ambiente');
+                if($ambiente == 'producao') {
+                    $tpAmb = '1';
+                } else if($ambiente == 'homologacao') {
+                    $tpAmb = '2';
+                }
                 if(!$model->getNfeId()) {
                     $nfeRange = Mage::getModel('nfe/nferange')->load('1');
                     $serie = $nfeRange->getSerie();
@@ -175,12 +181,6 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $tpImp = '1';
                     } else if($formatoDanfe == 'landscape') {
                         $tpImp = '2';
-                    }
-                    $ambiente = Mage::getStoreConfig('nfe/nfe_opcoes/ambiente');
-                    if($ambiente == 'producao') {
-                        $tpAmb = '1';
-                    } else if($ambiente == 'homologacao') {
-                        $tpAmb = '2';
                     }
                     $chave = $cUF . $aamm . $cnpj . $mod . $serie . $nNF . $tpEmis . $cNF;
                     $cDV = $nfeRN->calcularDV($chave);
@@ -202,8 +202,16 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 }
                 $model->setDhEmi($dhEmi);
                 $model->setDhSaiEnt($dhSaiEnt);
-                $model->setTransCnpj(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cnpj']));
-                $model->setTransCpf(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cpf']));
+                if($postData['nfe']['trans_cnpj']) {
+                    $model->setTransCnpj(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cnpj']));
+                    $model->setTransCpf(null);
+                }
+                if($postData['nfe']['trans_cpf']) {
+                    $model->setTransCpf(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cpf']));
+                    $model->setTransCnpj(null);
+                }
+                
+                
                 $nfeMunicipioTransporte = $validarCampos->getMunicipio($postData['nfe']['trans_x_mun']);
                 if($postData['nfe']['trans_x_mun'] != '' && !$nfeMunicipioTransporte->getCodigo()) {
                     $erro = true;
@@ -311,14 +319,18 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 }
                 $nfeIdentificacaoDestinatario->setNfeId($nfeId);
                 if($postData['destinatario']['cnpj']) {
-                    if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['ie'], 1, 14)) {
-                        $erro = true;
-                        $msgErro = utf8_encode('A IE do destinatário da NF-e não é válida.');
-                    }
                     $nfeIdentificacaoDestinatario->setCnpj(preg_replace('/[^\d]/', '', $postData['destinatario']['cnpj']));
+                    $nfeIdentificacaoDestinatario->setCpf(null);
                 }
                 if($postData['destinatario']['cpf']) {
                     $nfeIdentificacaoDestinatario->setCpf(preg_replace('/[^\d]/', '', $postData['destinatario']['cpf']));
+                    $nfeIdentificacaoDestinatario->setCnpj(null);
+                    $nfeIdentificacaoDestinatario->setIndIeDest('9');
+                    $nfeIdentificacaoDestinatario->setIe(null);
+                    $nfeIdentificacaoDestinatario->setIsuf(null);
+                }
+                if($tpAmb == '2') {
+                    $nfeIdentificacaoDestinatario->setXNome('NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL');
                 }
                 $nfeIdentificacaoDestinatario->setCMun($nfeMunicipioDestinatario->getIbgeUf().$nfeMunicipioDestinatario->getCodigo());
                 $nfeIdentificacaoDestinatario->setXMun($nfeMunicipioDestinatario->getNome());
@@ -377,9 +389,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $nfeIdentificacaoRetirada->setNfeId($nfeId);
                     if($postData['retirada']['cnpj']) {
                         $nfeIdentificacaoRetirada->setCnpj(preg_replace('/[^\d]/', '', $postData['retirada']['cnpj']));
+                        $nfeIdentificacaoDestinatario->setCpf(null);
                     }
                     if($postData['retirada']['cpf']) {
                         $nfeIdentificacaoRetirada->setCpf(preg_replace('/[^\d]/', '', $postData['retirada']['cpf']));
+                        $nfeIdentificacaoDestinatario->setCnpj(null);
                     }
                     $nfeMunicipioRetirada = $validarCampos->getMunicipio($postData['retirada']['x_mun']);
                     if(!$nfeMunicipioRetirada->getCodigo()) {
@@ -413,9 +427,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $nfeIdentificacaoEntrega->setNfeId($nfeId);
                     if($postData['entrega']['cnpj']) {
                         $nfeIdentificacaoEntrega->setCnpj(preg_replace('/[^\d]/', '', $postData['entrega']['cnpj']));
+                        $nfeIdentificacaoDestinatario->setCpf(null);
                     }
                     if($postData['entrega']['cpf']) {
                         $nfeIdentificacaoEntrega->setCpf(preg_replace('/[^\d]/', '', $postData['entrega']['cpf']));
+                        $nfeIdentificacaoDestinatario->setCnpj(null);
                     }
                     $nfeMunicipioEntrega = $validarCampos->getMunicipio($postData['entrega']['x_mun']);
                     if(!$nfeMunicipioEntrega->getCodigo()) {

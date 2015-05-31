@@ -265,6 +265,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $nfeIdentificacaoDestinatario->setXNome($order->getShippingAddress()->getFirstname().' '.$order->getShippingAddress()->getLastname());
             $nfeIdentificacaoDestinatario->setIndIeDest('9');
         }
+        if($tpAmb == '2') {
+            $nfeIdentificacaoDestinatario->setXNome('NF-E EMITIDA EM AMBIENTE DE HOMOLOGACAO - SEM VALOR FISCAL');
+        }
         $nfeIdentificacaoDestinatario->setXLgr($order->getShippingAddress()->getStreet(1));
         $nfeIdentificacaoDestinatario->setNro($order->getShippingAddress()->getStreet(2));
         $nfeIdentificacaoDestinatario->setXCpl($order->getShippingAddress()->getStreet(3));
@@ -724,7 +727,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $xLgr = $nfeIdentificacaoEntrega->getXLgr();
             $nro = $nfeIdentificacaoEntrega->getNro();
             $xCpl = $nfeIdentificacaoEntrega->getXCpl();
-            $xBairro = $nfeIdentificacaoEntrega->getXBairo();
+            $xBairro = $nfeIdentificacaoEntrega->getXBairro();
             $cMun = $nfeIdentificacaoEntrega->getCMun();
             $xMun = $nfeIdentificacaoEntrega->getXMun();
             $UF = $nfeIdentificacaoEntrega->getUf();
@@ -1349,8 +1352,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     
     private function salvarXml($xmlNfe, $caminho, $idTag) {
         $doc = new DOMDocument("1.0", "UTF-8");
-        $doc->formatOutput = true;
-        $doc->loadXML($xmlNfe);
+        $doc->preservWhiteSpace = false; //elimina espaços em branco
+        $doc->formatOutput = false;
+        $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
         $doc->save($caminho.$idTag.'.xml');
     }
     

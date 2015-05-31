@@ -3455,7 +3455,8 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         }
         if ($obrigatorio || $content !== '') {
             if($content != null) {
-                $content = trim($content);
+                $content = trim(preg_replace('/\s\s+/', " ", $content));
+                $content = $this->limpaString($content);
                 $temp = $this->dom->createElement($name, $content);
                 $parent->appendChild($temp);
             }
@@ -3482,4 +3483,28 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
             $parent->appendChild($child);
         }
     }
+    
+    /**
+     * limpaString
+     * Remove todos dos caracteres especiais do texto e os acentos
+     * preservando apenas letras de A-Z numeros de 0-9 e 
+     * os caracteres @ , - ; $ % : / _
+     * 
+     * @name limpaString
+     * @param string $texto String a ser limpa
+     * @return  string Texto sem caractere especiais
+     */
+    private function limpaString($texto)
+    {
+        $aFind = array('&', 'á', 'à', 'ã', 'â', 'é', 'ê',
+            'í', 'ó', 'ô', 'õ', 'ú', 'ü', 'ç', 'Á', 'À', 'Ã', 'Â',
+            'É', 'Ê', 'Í', 'Ó', 'Ô', 'Õ', 'Ú', 'Ü', 'Ç');
+        $aSubs = array('e', 'a', 'a', 'a', 'a', 'e', 'e',
+            'i', 'o', 'o', 'o', 'u', 'u', 'c', 'A', 'A', 'A', 'A',
+            'E', 'E', 'I', 'O', 'O', 'O', 'U', 'U', 'C');
+        $novoTexto = str_replace($aFind, $aSubs, $texto);
+        $novoTexto = preg_replace("/[^a-zA-Z0-9 @,-.;$%:\/_]/", "", $novoTexto);
+        $novoTexto = strtoupper($novoTexto);
+        return $novoTexto;
+    } //fim limpaString
 }
