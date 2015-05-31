@@ -116,14 +116,14 @@
     
     <crontab>
         <jobs>
-            <processa_nfe>
+            <envia_nfe>
                 <schedule>
-                    <cron_expr>*/10 * * * *</cron_expr>
+                    <cron_expr>*/5 * * * *</cron_expr>
                 </schedule>
                 <run>
-                    <model>nfe/observer::gerarNfe</model>
+                    <model>nfe/observer::autorizarNfe</model>
                 </run>
-            </processa_nfe>
+            </envia_nfe>
         </jobs>
     </crontab>
     

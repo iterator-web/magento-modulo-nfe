@@ -34,13 +34,108 @@
 
 class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
     
-    public function gerarNfe() {
-        $orderCollection = Mage::getResourceModel('sales/order_collection');
-        $orderCollection->addFieldToFilter('status', array('in' => array('processing', 'nfe_cancelada')));
-        foreach ($orderCollection as $order){
-            $nfeRN = Mage::getModel('nfe/nfeRN');
-            $nfeRN->montarNfe($order);
+    public function autorizarNfe() {
+        $enviosSucesso = true;
+        $nfeCollection = Mage::getModel('nfe/nfe')->getCollection()
+                        ->addFieldToFilter('status', array('in' => array('0','1','2','3','4')));
+        foreach($nfeCollection as $nfe) {
+            if($nfe->getStatus() == '0') {
+                $this->setRetorno(utf8_encode('A fila de envios contém uma NF-e que ainda está aguardando aprovação. O número da NF-e é: '.$nfe->getNNf()));
+                $enviosSucesso = false;
+                break;
+            } else if($nfe->getStatus() == '4') {
+                continue;
+            } else if($nfe->getStatus() == '3') {
+                
+            } else if($nfe->getStatus() == '2') {
+                
+            } else if($nfe->getStatus() == '1') {
+                $indSinc = 0;
+                $nfeTools = Mage::Helper('nfe/nfeTools');
+                $xmlNfe = $nfeTools->getXmlNfe($nfe);
+                $sXml = $this->xmlString($xmlNfe);
+                $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+                $aRetorno = array();
+                $protocolo = $nfeTools->autoriza($aNFe, $nfe->getNfeId(), $aRetorno, $indSinc, $nfe->getTpAmb(), $estadoEmitente->getCode(), $nfe->getCUf());
+                if($protocolo['retorno'] == 'sucesso') {
+                    if($indSinc == 1) {
+                        $nfe->setVerAplic($protocolo['infProt']['verAplic']);
+                        $nfe->setDhRecbto($protocolo['infProt']['dhRecbto']);
+                        $nfe->setNProt($protocolo['infProt']['nProt']);
+                        $nfe->setDigVal($protocolo['infProt']['digVal']);
+                        $nfe->setDhCStat($protocolo['infProt']['cStat']);
+                        $nfe->setXMotivo($protocolo['infProt']['xMotivo']);
+                        $xmlProtocolado = $nfeTools->addProt($xmlNfe, $protocolo['infProt'], $protocolo['protNFeVersao'], 'protNFe');
+                        if($xmlProtocolado['retorno'] == 'sucesso') {
+                            $this->salvarXml($xmlProtocolado['xml'], $nfe);
+                            $nfe->setStatus('3');
+                            $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
+                            $nfe->save();
+                        } else {
+                            $nfe->setStatus('4');
+                            $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
+                            $nfe->save();
+                            $this->setRetorno(utf8_encode('A fila de envios teve problemas durante a protocolação da NF-e número: '.$nfe->getNNf(). '. O problema relatado: '.utf8_decode($xmlProtocolado['retorno'])));
+                            $enviosSucesso = false;
+                        }
+                    } else {
+                        $nfe->setNRec($protocolo['infRec']['nRec']);
+                        $nfe->setStatus('2');
+                        $nfe->setMensagem(utf8_encode('Aguardando retorno do orgão responsável.'));
+                        $nfe->save();
+                    }
+                } else {
+                    if(strpos($protocolo['retorno'],'204') !== false || strpos($protocolo['retorno'],'656') !== false) {
+                        $nfe->setStatus('2');
+                        $nfe->setMensagem(utf8_encode('Aguardando para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));
+                    } else if(strpos($protocolo['retorno'],'110') !== false || strpos($protocolo['retorno'],'205') !== false || strpos($protocolo['retorno'],'233') !== false || 
+                            strpos($protocolo['retorno'],'234') !== false || strpos($protocolo['retorno'],'301') !== false || strpos($protocolo['retorno'],'302') !== false) {
+                        $nfe->setStatus('8');
+                        $nfe->setMensagem(utf8_encode('A utilização da NF-e foi denegada. Erro: '.utf8_decode($protocolo['retorno'])));
+                    } else {
+                        $nfe->setStatus('4');
+                        $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));
+                    }
+                    $nfe->save();
+                    $this->setRetorno(utf8_encode('A fila de envios teve problemas durante o envio da NF-e número: '.$nfe->getNNf(). '. O problema relatado: '.utf8_decode($protocolo['retorno'])));
+                    $enviosSucesso = false;
+                }
+            }
         }
+        if($enviosSucesso) {
+            $this->setRetorno(utf8_encode('A fila de envios está vazia. Todas as NF-e foram enviadas com sucesso.'));
+        }
+    }
+    
+    private function setRetorno($mensagem) {
+        $retorno = Mage::getModel('nfe/nferetorno')->load('1');
+        $retorno->setRetornoId('1');
+        $retorno->setRetornoMensagem($mensagem);
+        $retorno->save();
+    }
+    
+    private function salvarXml($xmlNfe, $nfe) {
+        if($nfe->getTpNf() == '0') {
+            $tipo = 'entrada';
+        } else {
+            $tipo = 'saida';
+        }
+        $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS;
+        $doc = new DOMDocument("1.0", "UTF-8");
+        $doc->preservWhiteSpace = false; //elimina espaÃ§os em branco
+        $doc->formatOutput = false;
+        $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $doc->save($caminho.$nfe->getIdTag().'.xml');
+    }
+    
+    private function xmlString($xmlNfe) {
+        $aNFe = file_get_contents($xmlNfe);
+        $xmldoc = new DOMDocument('1.0', 'utf-8');
+        $xmldoc->preservWhiteSpace = false; //elimina espaÃ§os em branco
+        $xmldoc->formatOutput = false;
+        $xmldoc->loadXML($aNFe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $sXml = $xmldoc->saveXML();
+        return $sXml;
     }
 }
 
