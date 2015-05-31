@@ -135,7 +135,8 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
                     4 => utf8_encode('Aguardando Correção'),
                     5 => 'Aguardando Cancelamento',
                     6 => 'Cancelado',
-                    7 => 'Completo'
+                    7 => 'Completo',
+                    8 => 'Denegado'
                 ),
                 'renderer'  => 'Iterator_Nfe_Block_Adminhtml_Nfe_AcaoStatus',
             )
