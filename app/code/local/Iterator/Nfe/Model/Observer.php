@@ -46,30 +46,50 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
             } else if($nfe->getStatus() == '4') {
                 continue;
             } else if($nfe->getStatus() == '3') {
+                // Faz o processo final da NF-e de enviar email ao cliente e gerar a Danfe
+                // Gera a DANFE
+
+                // Envia Email ao Cliente
+                
+                // Altera pedido para status NF-e Enviada
+
+                // Adiciona informações ao histórico do pedido com a informação de exibir também na front para o cliente
                 
             } else if($nfe->getStatus() == '2') {
-                $nfeTools = Mage::Helper('nfe/nfeTools');
+                // Busca o retorno do protocolo de autorização através do méotdo getProtocol()
+                $nfeHelper = Mage::Helper('nfe/nfeHelper');
                 $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
                 $aRetorno = array();
                 if($nfe->getNRec() && strpos($nfe->getMensagem(),'Erro: 204') === false) {
-                    $protocolo = $nfeTools->getProtocol($nfe->getNRec(), '', $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf());
+                    $protocolo = $nfeHelper->getProtocol($nfe->getNRec(), '', $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf());
                 } else {
-                    $protocolo = $nfeTools->getProtocol('', substr($nfe->getIdTag(),3), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(),$nfe->getCUf());
+                    $protocolo = $nfeHelper->getProtocol('', substr($nfe->getIdTag(),3), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(),$nfe->getCUf());
                 }
                 if($protocolo['retorno'] == 'sucesso') {
+                    // Persiste informações $protocolo['infProt'] no banco de dados
                     $nfe->setVerAplic($protocolo['infProt']['verAplic']);
                     $nfe->setDhRecbto($protocolo['infProt']['dhRecbto']);
                     $nfe->setNProt($protocolo['infProt']['nProt']);
                     $nfe->setDigVal($protocolo['infProt']['digVal']);
                     $nfe->setCStat($protocolo['infProt']['cStat']);
                     $nfe->setXMotivo($protocolo['infProt']['xMotivo']);
-                    $xmlNfe = $nfeTools->getXmlNfe($nfe);
-                    $xmlProtocolado = $nfeTools->addProt($xmlNfe, $protocolo['infProt'], $nfe->getVersao(), 'protNFe');
+                    $xmlNfe = $nfeHelper->getXmlNfe($nfe);
+                    $xmlProtocolado = $nfeHelper->addProt($xmlNfe, $protocolo['infProt'], $nfe->getVersao(), 'protNFe');
                     if($xmlProtocolado['retorno'] == 'sucesso') {
+                        // Salva o XML $xmlProtocolado['xml']
                         $this->salvarXml($xmlProtocolado['xml'], $nfe);
+                        // Adiciona status 3
                         $nfe->setStatus('3');
                         $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                         $nfe->save();
+                        // Gera a DANFE
+
+                        // Envia Email ao Cliente
+
+                        // Altera pedido para status NF-e Enviada
+
+                        // Adiciona informações ao histórico do pedido com a informação de exibir também na front para o cliente
+
                     } else {
                         $nfe->setStatus('2');
                         $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
@@ -94,28 +114,42 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                     $enviosSucesso = false;
                 }
             } else if($nfe->getStatus() == '1') {
+                // Executar comunicação com SEFAZ
+                // Solicitar autorização
                 $indSinc = 0;
-                $nfeTools = Mage::Helper('nfe/nfeTools');
-                $xmlNfe = $nfeTools->getXmlNfe($nfe);
+                $nfeHelper = Mage::Helper('nfe/nfeHelper');
+                $xmlNfe = $nfeHelper->getXmlNfe($nfe);
                 $sXml = $this->xmlString($xmlNfe);
                 $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
                 $aRetorno = array();
-                $protocolo = $nfeTools->autoriza($aNFe, $nfe->getNfeId(), $aRetorno, $indSinc, $nfe->getTpAmb(), $estadoEmitente->getCode(), $nfe->getCUf());
+                $protocolo = $nfeHelper->autoriza($aNFe, $nfe->getNfeId(), $aRetorno, $indSinc, $nfe->getTpAmb(), $estadoEmitente->getCode(), $nfe->getCUf());
                 if($protocolo['retorno'] == 'sucesso') {
                     if($indSinc == 1) {
+                        // Persiste informações $protocolo['infProt'] no banco de dados
                         $nfe->setVerAplic($protocolo['infProt']['verAplic']);
                         $nfe->setDhRecbto($protocolo['infProt']['dhRecbto']);
                         $nfe->setNProt($protocolo['infProt']['nProt']);
                         $nfe->setDigVal($protocolo['infProt']['digVal']);
                         $nfe->setDhCStat($protocolo['infProt']['cStat']);
                         $nfe->setXMotivo($protocolo['infProt']['xMotivo']);
-                        $xmlProtocolado = $nfeTools->addProt($xmlNfe, $protocolo['infProt'], $protocolo['protNFeVersao'], 'protNFe');
+                        $xmlProtocolado = $nfeHelper->addProt($xmlNfe, $protocolo['infProt'], $protocolo['protNFeVersao'], 'protNFe');
                         if($xmlProtocolado['retorno'] == 'sucesso') {
+                            // Salva o XML $xmlProtocolado['xml']
                             $this->salvarXml($xmlProtocolado['xml'], $nfe);
+                            // Adiciona status 3
                             $nfe->setStatus('3');
                             $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                             $nfe->save();
+                            // Gera a DANFE
+
+                            // Envia Email ao Cliente
+                            
+                            // Altera pedido para status NF-e Enviada
+                            
+                            // Adiciona informações ao histórico do pedido com a informação de exibir também na front para o cliente
+                            
                         } else {
+                            // Adiciona status 4
                             $nfe->setStatus('4');
                             $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
                             $nfe->save();
@@ -123,6 +157,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             $enviosSucesso = false;
                         }
                     } else {
+                        // Caso venha sem protocólo salvar com status 2 e sair
                         $nfe->setNRec($protocolo['infRec']['nRec']);
                         $nfe->setStatus('2');
                         $nfe->setMensagem(utf8_encode('Aguardando retorno do orgão responsável.'));

@@ -32,7 +32,7 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  * @observacao Esta classe possui métodos que pertencem originalmente ao projeto NFePHP sendo assim todos os seus créditos serão mantidos.
  */
-class Iterator_Nfe_Helper_NfeTools extends Mage_Core_Helper_Abstract {
+class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
     /**
     * Este arquivo Ã© parte do projeto NFePHP - Nota Fiscal eletrÃ´nica em PHP.
     *

@@ -90,7 +90,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $dataHoraAtual = date("Y-m-d H:i:s");
         $dataHoraSaida = date("Y-m-d H:i:s", strtotime('+5 hours'));
         $estadoDestino = Mage::getModel('directory/region')->load($order->getShippingAddress()->getRegionId());
-        if($cUF == $estadoDestino->getRegionId()) {
+        if($estadoEmitente->getRegionId() == $estadoDestino->getRegionId()) {
             $idDest = '1';
         } else  {
             $idDest = '2';
@@ -521,15 +521,15 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     
     public function gerarXML($nfeId) {
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
-        $nfeTools = Mage::Helper('nfe/nfeTools');
+        $nfeHelper = Mage::Helper('nfe/nfeHelper');
         $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
         $this->preencherCampos($nfe, $nfeCriarXML);
         $retornoXml = $this->gerarArquivoXML($nfe, $nfeCriarXML);
         if($retornoXml == 'sucesso') {
-            $xmlNfe = $nfeTools->getXmlNfe($nfe);
+            $xmlNfe = $nfeHelper->getXmlNfe($nfe);
             $xmlAssinado = $this->assinarXml($xmlNfe, 'infNFe', $nfe);
             if($xmlAssinado == 'sucesso') {
-                $xmlNfe = $nfeTools->getXmlNfe($nfe);
+                $xmlNfe = $nfeHelper->getXmlNfe($nfe);
                 $xmlValidado = $this->validarXml($xmlNfe);
                 if($xmlValidado == 'sucesso') {
                     return 'sucesso';
@@ -1449,8 +1449,8 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     private function assinarXml($docxml, $tagid = '', $nfe) {
         $msg = 'sucesso';
         try {
-            $nfeTools = Mage::Helper('nfe/nfeTools');
-            $certificado = $nfeTools->pLoadCerts();
+            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $certificado = $nfeHelper->pLoadCerts();
             if($certificado['retorno'] != 'sucesso') {
                 return $certificado['retorno'];
             }
@@ -1578,7 +1578,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $X509Data = $xmldoc->createElement('X509Data');
             $KeyInfo->appendChild($X509Data);
             //carrega o certificado sem as tags de inicio e fim
-            $cert = $nfeTools->pCleanCerts($certificado['pubKey']);
+            $cert = $nfeHelper->pCleanCerts($certificado['pubKey']);
             //X509Certificate
             $newNode = $xmldoc->createElement('X509Certificate', $cert);
             $X509Data->appendChild($newNode);
