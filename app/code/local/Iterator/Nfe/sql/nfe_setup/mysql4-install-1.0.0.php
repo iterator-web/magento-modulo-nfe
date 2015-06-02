@@ -52,7 +52,7 @@ $installer->run(utf8_encode("
     `versao` VARCHAR(4) NULL,
     `id_tag` VARCHAR(47) NULL,
     `c_uf` TINYINT(2) UNSIGNED NULL,
-    `c_nf` INT(8) UNSIGNED NULL,
+    `c_nf` INT(8) UNSIGNED ZEROFILL NULL,
     `nat_op` VARCHAR(60) NULL,
     `ind_pag` TINYINT(1) UNSIGNED NULL,
     `mod` VARCHAR(2) NULL,
