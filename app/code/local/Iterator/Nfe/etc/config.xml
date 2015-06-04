@@ -6,6 +6,18 @@
         </Iterator_Nfe>
     </modules>
     
+    <frontend>
+        <routers>
+            <nfe>
+                <use>standard</use>
+                <args>
+                    <module>Iterator_Nfe</module>
+                    <frontName>nfe</frontName>
+                </args>
+            </nfe>
+        </routers>
+    </frontend>
+    
     <admin>
         <routers>
             <adminhtml>
@@ -112,6 +124,15 @@
                 <class>Iterator_Nfe_Helper</class>
             </nfe>
         </helpers>
+        <template>
+            <email>
+                <nfe_email_template translate="label" module="Iterator_Nfe">
+                    <label>NF-e Email</label>
+                    <file>nfe/email_nfe.html</file>
+                    <type>html</type>
+                </nfe_email_template>
+            </email>
+        </template>
     </global>  
     
     <crontab>

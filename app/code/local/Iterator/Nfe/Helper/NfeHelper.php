@@ -1474,4 +1474,38 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag().'.xml';
         return $xml; 
     }
+    
+    public function enviarEmail($nfe) {
+        if($nfe->getTpNf() == '0') {
+            $tipo = 'entrada';
+        } else {
+            $tipo = 'saida';
+        }
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $pdfUrl = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/pdf/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $xmlUrl = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/xml/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $pdfImg = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'pdf_logo.png';
+        $xmlImg = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'xml_logo.png';
+        $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
+        Mage::getModel('core/email_template')
+            ->setDesignConfig(array(
+                'area'  => 'frontend',
+                'store' => Mage::app()->getStore()->getStoreId()
+            ))->sendTransactional(
+                'nfe_email_template',
+                $sender,
+                $order->getCustomerEmail(),
+                null,
+                array(
+                    'store' => Mage::app()->getStore(),
+                    'order' => $order,
+                    'nfe_chve' => substr($nfe->getIdTag(),3),
+                    'xml_url' => $xmlUrl,
+                    'pdf_url' => $pdfUrl,
+                    'xml_img' => $xmlImg,
+                    'pdf_img' => $pdfImg,
+                    'nfe_name' => utf8_encode('Nota Fiscal Eletrônica')
+                )
+            );
+    }
 }

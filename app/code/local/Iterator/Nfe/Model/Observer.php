@@ -50,6 +50,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                 $xmlNfe = $nfeHelper->getXmlNfe($nfe);
                 $sXml = $this->xmlString($xmlNfe);
                 $this->gerarDanfe($sXml, $nfe);
+                $nfeHelper->enviarEmail($nfe);
             } else if($nfe->getStatus() == '2') {
                 $nfeHelper = Mage::Helper('nfe/nfeHelper');
                 $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
@@ -74,6 +75,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                         $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                         $nfe->save();
                         $this->gerarDanfe($xmlProtocolado['xml'], $nfe);
+                        $nfeHelper->enviarEmail($nfe);
                     } else {
                         $nfe->setStatus('2');
                         $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
@@ -120,6 +122,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                             $nfe->save();
                             $this->gerarDanfe($xmlProtocolado['xml'], $nfe);
+                            $nfeHelper->enviarEmail($nfe);
                         } else {
                             $nfe->setStatus('4');
                             $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));

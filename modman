@@ -2,6 +2,7 @@
 /app/design/adminhtml/default/default/layout/iterator_nfe.xml /app/design/adminhtml/default/default/layout/iterator_nfe.xml
 /app/design/adminhtml/default/default/template/iterator_nfe /app/design/adminhtml/default/default/template/iterator_nfe
 /app/etc/modules/Iterator_Nfe.xml /app/etc/modules/Iterator_Nfe.xml
+/app/locale/pt_BR/template/email/nfe/email_nfe.html /app/locale/pt_BR/template/email/nfe/email_nfe.html
 /js/iterator/nfe.js /js/iterator/nfe.js
 /js/iterator/nfe_emissao.js /js/iterator/nfe_emissao.js
 /js/iterator/nfe_validador.js /js/iterator/nfe_validador.js
