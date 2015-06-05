@@ -1475,17 +1475,30 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         return $xml; 
     }
     
-    public function enviarEmail($nfe) {
+    public function gerarDanfe($xmlNfe, $nfe) {
         if($nfe->getTpNf() == '0') {
             $tipo = 'entrada';
         } else {
             $tipo = 'saida';
         }
+        $formatoImpressao = Mage::getStoreConfig('nfe/danfe_opcoes/formato');
+        if($formatoImpressao == 'portraite') {
+            $formato = 'P';
+        } else {
+            $formato = 'L';
+        }
+        $logo = $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
+        $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . $tipo . DS . $nfe->getIdTag().'.pdf';
+        $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag().'.xml';
+        $nfeDanfe = Mage::Helper('nfe/pdf_nfeDanfe');
+        $nfeDanfe->init($xmlNfe, $formato, 'A4', $logo, 'I', '');
+        $nfeDanfe->montaDANFE($formato, 'A4', 'C');
+        $nfeDanfe->printDANFE($pdf, 'F');
+    }
+    
+    public function enviarEmail($nfe) {
         $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
-        $pdfUrl = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/pdf/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
-        $xmlUrl = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/xml/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
-        $pdfImg = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'pdf_logo.png';
-        $xmlImg = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'xml_logo.png';
+        $downloadsDetalhes = $this->getDownloads($nfe);
         $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
         Mage::getModel('core/email_template')
             ->setDesignConfig(array(
@@ -1500,12 +1513,41 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
                     'store' => Mage::app()->getStore(),
                     'order' => $order,
                     'nfe_chve' => substr($nfe->getIdTag(),3),
-                    'xml_url' => $xmlUrl,
-                    'pdf_url' => $pdfUrl,
-                    'xml_img' => $xmlImg,
-                    'pdf_img' => $pdfImg,
+                    'xml_url' => $downloadsDetalhes['xml_url'],
+                    'pdf_url' => $downloadsDetalhes['pdf_url'],
+                    'xml_img' => $downloadsDetalhes['xml_img'],
+                    'pdf_img' => $downloadsDetalhes['pdf_img'],
                     'nfe_name' => utf8_encode('Nota Fiscal EletrÙnica')
                 )
             );
+    }
+    
+    public function setCompleto($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
+        $order->setData('status', 'nfe_enviada');
+        $order->addStatusToHistory(nfe_enviada, 
+        'O processo de emiss√£o da Nota Fiscal Eletr√µnica (NF-e) foi completado e o cliente foi notificado com sucesso.<br/>
+         A Chave de Acesso da NF-e √©: '.substr($nfe->getIdTag(),3).'<br/>
+         Status: Completo');
+        $order->save();
+        $nfe->setStatus('7');
+        $nfe->setMensagem(utf8_encode('Processo de emiss„o da NF-e completo.'));
+        $nfe->save();
+    }
+    
+    public function getDownloads($nfe) {
+        $downloadsDetalhes = array();
+        if($nfe->getTpNf() == '0') {
+            $tipo = 'entrada';
+        } else {
+            $tipo = 'saida';
+        }
+        $downloadsDetalhes['pdf_url'] = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/pdf/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $downloadsDetalhes['xml_url'] = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/xml/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $downloadsDetalhes['pdf_img'] = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'pdf_logo.png';
+        $downloadsDetalhes['xml_img'] = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'xml_logo.png';
+        
+        return $downloadsDetalhes;
     }
 }

@@ -1,0 +1,59 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$order = $this->getOrder();
+$nfe = Mage::getModel('nfe/nfe')->getCollection()
+        ->addFieldToFilter('pedido_increment_id', array('eq' => $order->getIncrementId()))
+        ->addFieldToFilter('status', array('eq' => '7'))
+        ->getFirstItem();
+$nfeHelper = Mage::Helper('nfe/nfeHelper');
+$downloadsDetalhes = $nfeHelper->getDownloads($nfe);
+if($nfe->getIdTag()) :
+?>
+<table cellspacing="0" cellpadding="0" border="0" width="100%">
+    <thead>
+    <tr>
+        <th align="left" bgcolor="#DEE5E8" style="padding:5px 9px 6px 9px; border:1px solid #D0CBC1; line-height:1em; color:#535050;">Arquivos da Nota Fiscal Eletr&ocirc;nica (NF-e): <strong>#<?php echo substr($nfe->getIdTag(),3); ?></strong></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td valign="top" style="padding:7px 9px 9px 9px; border:1px solid #D0CBC1; border-top:0; background:#f8f7f5;">
+            <a href="<?php echo $downloadsDetalhes['xml_url']; ?>"><img title="Arquivo XML" alt="Arquivo XML" src="<?php echo $downloadsDetalhes['xml_img']; ?>" width="64" /></a>
+            <a href="<?php echo $downloadsDetalhes['pdf_url']; ?>"><img title="Arquivo PDF" alt="Arquivo PDF" src="<?php echo $downloadsDetalhes['pdf_img']; ?>" width="64" /></a>
+        </td>
+    </tr>
+    </tbody>
+</table>
+<?php endif; ?>

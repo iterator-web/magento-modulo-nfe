@@ -16,6 +16,13 @@
                 </args>
             </nfe>
         </routers>
+        <layout>
+            <updates>
+                <nfe>
+                    <file>nfe.xml</file>
+                </nfe>
+            </updates>
+        </layout>
     </frontend>
     
     <admin>
