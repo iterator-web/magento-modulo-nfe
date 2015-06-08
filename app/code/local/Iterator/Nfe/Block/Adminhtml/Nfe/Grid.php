@@ -136,7 +136,8 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
                     5 => 'Aguardando Cancelamento',
                     6 => 'Cancelado',
                     7 => 'Completo',
-                    8 => 'Denegado'
+                    8 => 'Denegado',
+                    9 => 'Inutilizado'
                 ),
                 'renderer'  => 'Iterator_Nfe_Block_Adminhtml_Nfe_AcaoStatus',
             )

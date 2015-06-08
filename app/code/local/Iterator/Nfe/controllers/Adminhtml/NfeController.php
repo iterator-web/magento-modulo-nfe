@@ -1024,6 +1024,27 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $this->getResponse()->setBody(Mage::helper('core')->jsonEncode($result));
     }
     
+    public function retirarAction() {
+        $nfeId = $this->getRequest()->getParam('nfe_id');
+        $nfe = Mage::getModel('nfe/nfe');
+        $nfe->load($nfeId);
+        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+        $aRetorno = array();
+        $xmlInutilizado = $nfeHelper->inutNF(date('y'), strval(intval($nfe->getSerie())), strval(intval($nfe->getNNf())), strval(intval($nfe->getNNf())), utf8_encode('Número inutilizado por erro de operação'), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf(), $nfe->getMod(), preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj')));
+        if($xmlInutilizado['retorno'] == 'sucesso') {
+            Mage::getSingleton('adminhtml/session')->addSuccess($this->__('A NF-e foi inutilizada com sucesso.'));
+            $nfeHelper->salvarXmlInutilizado($xmlInutilizado['xml'], $nfe);
+            $nfeHelper->setRetirado($nfe);
+        } else {
+            Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era inutilizada.'));
+            $nfe->setMensagem(utf8_encode('Houve erro na inutilização do número. Erro: '.utf8_decode($xmlInutilizado['retorno'])));
+            $nfe->save();
+        }
+        $this->_redirect('*/*/');
+        return;
+    }
+    
     protected function _isAllowed() {
         return Mage::getSingleton('admin/session')->isAllowed('catalog/controleestoque');
     }

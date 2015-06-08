@@ -38,7 +38,7 @@ class Iterator_Nfe_Block_Adminhtml_Order_View extends Mage_Adminhtml_Block_Sales
         parent::__construct();
         $status = $this->getOrder()->getStatus();
         
-        if($status == 'processing' || $status == 'nfe_cancelada') {
+        if($status == 'processing' || $status == 'nfe_cancelada' || $status == 'nfe_retirada') {
             $this->_addButton('gerar_nfe', array(
                     'label'     => 'Gerar NF-e',
                     'onclick'   => 'setLocation(\'' . $this->getUrl('*/nfe/gerarNfe') . '\')',

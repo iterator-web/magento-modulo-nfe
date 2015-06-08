@@ -46,6 +46,18 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit extends Mage_Adminhtml_Block_Widget_
      
         $this->_updateButton('save', 'label', $this->__('Salvar e Aprovar Envio da NF-e'));
         $this->_removeButton('delete');
+        if( Mage::registry('nfe') && Mage::registry('nfe')->getStatus() == '0' ) {
+            $this->_addButton('retirar', array(
+                'label'     => Mage::helper('adminhtml')->__('Retirar e Inutilizar'),
+                'onclick'   => 'retirarNfe()',
+                'class'     => 'delete',
+            ), 0, 100);
+        }
+        $this->_formScripts[] = "        
+            function retirarNfe(){
+                confirmSetLocation(\"".utf8_encode('Você tem certeza que deseja retirar esta NF-e? Este número será inutilizado.')."\", \"".Mage::helper('adminhtml')->getUrl('*/nfe/retirar/')."nfe_id/".$this->htmlEscape(Mage::registry('nfe')->getId())."\");
+            }
+        ";
     }  
  
     public function getHeaderText() {

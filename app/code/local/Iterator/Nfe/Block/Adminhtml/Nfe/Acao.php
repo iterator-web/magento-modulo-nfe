@@ -41,7 +41,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_
         $order = Mage::getModel('sales/order')->loadByIncrementId($row->getData('pedido_increment_id'));
         if($status == '0' || $status == '4') {
             $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/edit/')."nfe_id/".$nfeId.'\');">Editar e Aprovar</a>';
-        } else if($status == '1' || $status == '2' || $status == '5' || $status == '6' || $status == '8' || $status == '7' && $order->getStatus() == 'complete') {
+        } else if($status == '1' || $status == '2' || $status == '5' || $status == '6' || $status == '8' || $status == '9' || $status == '7' && $order->getStatus() == 'complete') {
             $nNf =  $row->getData('n_nf');
             $adminUrl = Mage::helper('adminhtml')->getUrl('*/nfe/consultarNfe');
             $skinUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_SKIN);

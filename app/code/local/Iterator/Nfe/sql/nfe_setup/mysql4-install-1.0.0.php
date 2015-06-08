@@ -6085,6 +6085,9 @@ $status->setStatus('nfe_enviada')->setLabel('NF-e Enviada')
 $status->setStatus('nfe_cancelada')->setLabel('NF-e Cancelada')
     ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
     ->save();
+$status->setStatus('nfe_retirada')->setLabel('NF-e Retirada')
+    ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
+    ->save();
 
 $resource = Mage::getSingleton('core/resource');
 $readConnection = $resource->getConnection('core_read');

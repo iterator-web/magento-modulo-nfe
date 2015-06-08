@@ -1148,6 +1148,671 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
     } //fim addProt
     
     /**
+     * M�todo pertence a classe ToolsNFePHP.class.php do projeto NFE-PHP
+     * signXML
+     * Assinador TOTALMENTE baseado em PHP para arquivos XML
+     * este assinador somente utiliza comandos nativos do PHP para assinar
+     * os arquivos XML
+     *
+     * @name signXML
+     * @param  mixed $docxml Path para o arquivo xml ou String contendo o arquivo XML a ser assinado
+     * @param  string $tagid TAG do XML que devera ser assinada
+     * @return mixed false se houve erro ou string com o XML assinado
+     */
+    public function assinarXml($docxml, $tagid = '', $nfe, $operacao) {
+        $msg = 'sucesso';
+        try {
+            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $certificado = $nfeHelper->pLoadCerts();
+            if($certificado['retorno'] != 'sucesso') {
+                return $certificado['retorno'];
+            }
+            if ($tagid == '') {
+                $msg = "Uma tag deve ser indicada para que seja assinada!!";
+                return $msg;
+            }
+            if ($docxml == '') {
+                $msg = "Um xml deve ser passado para que seja assinado!!";
+                return $msg;
+            }
+            if (! is_file($certificado['priKey'])) {
+                $msg = "Arquivo da chave privada parece invalido, verifique!!";
+                return $msg;
+            }
+            if (is_file($docxml)) {
+                $xml = file_get_contents($docxml);
+            } else {
+                $xml = $docxml;
+            }
+            //obter a chave privada para a assinatura
+            //modificado para permitir a leitura de arquivos maiores
+            //que o normal que é cerca de 2kBytes.
+            if (! $filep = fopen($certificado['priKey'], "r")) {
+                $msg = "Erro ao ler arquivo da chave privada!!";
+                return $msg;
+            }
+            $priv_key = '';
+            while (! feof($filep)) {
+                $priv_key .= fread($filep, 8192);
+            }
+            fclose($filep);
+            $pkeyid = openssl_get_privatekey($priv_key);
+            //limpeza do xml com a retirada dos CR, LF e TAB
+            $order = array("\r\n", "\n", "\r", "\t");
+            $replace = '';
+            $xml = str_replace($order, $replace, $xml);
+            // Habilita a manipulaçao de erros da libxml
+            libxml_use_internal_errors(true);
+            //limpa erros anteriores que possam estar em memória
+            libxml_clear_errors();
+            //carrega o documento DOM
+            $xmldoc = new DOMDocument('1.0', 'utf-8');
+            $xmldoc->preservWhiteSpace = false; //elimina espaços em branco
+            $xmldoc->formatOutput = false;
+            //é muito importante deixar ativadas as opçoes para limpar os espacos em branco
+            //e as tags vazias
+            if ($xmldoc->loadXML($xml, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG)) {
+                $root = $xmldoc->documentElement;
+            } else {
+                $msg = "Erro ao carregar XML, provavel erro na passagem do parâmetro docxml ou no próprio xml!!";
+                $errors = libxml_get_errors();
+                if (!empty($errors)) {
+                    $countI = 1;
+                    foreach ($errors as $error) {
+                        $msg .= "\n  [$countI]-".trim($error->message);
+                        $countI++;
+                    }
+                    libxml_clear_errors();
+                }
+                return $msg;
+            }
+            //extrair a tag com os dados a serem assinados
+            $node = $xmldoc->getElementsByTagName($tagid)->item(0);
+            if (!isset($node)) {
+                $msg = "A tag < $tagid > não existe no XML!!";
+                return $msg;
+            }
+            //extrai o atributo ID com o numero da NFe de 44 digitos
+            $Id = $node->getAttribute("Id");
+            //extrai e canoniza os dados da tag para uma string
+            $dados = $node->C14N(false, false, null, null);
+            //calcular o hash dos dados
+            $hashValue = hash('sha1', $dados, true);
+            //converte o valor para base64 para serem colocados no xml
+            $digValue = base64_encode($hashValue);
+            //monta a tag da assinatura digital
+            $Signature = $xmldoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'Signature');
+            $root->appendChild($Signature);
+            $SignedInfo = $xmldoc->createElement('SignedInfo');
+            $Signature->appendChild($SignedInfo);
+            //estabelece o método de canonização
+            $newNode = $xmldoc->createElement('CanonicalizationMethod');
+            $SignedInfo->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            //estabelece o método de assinatura
+            $newNode = $xmldoc->createElement('SignatureMethod');
+            $SignedInfo->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#rsa-sha1');
+            //indica a referencia da assinatura
+            $Reference = $xmldoc->createElement('Reference');
+            $SignedInfo->appendChild($Reference);
+            $Reference->setAttribute('URI', '#'.$Id);
+            //estabelece as tranformações
+            $Transforms = $xmldoc->createElement('Transforms');
+            $Reference->appendChild($Transforms);
+            $newNode = $xmldoc->createElement('Transform');
+            $Transforms->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+            $newNode = $xmldoc->createElement('Transform');
+            $Transforms->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+            //estabelece o método de calculo do hash
+            $newNode = $xmldoc->createElement('DigestMethod');
+            $Reference->appendChild($newNode);
+            $newNode->setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#sha1');
+            //carrega o valor do hash
+            $newNode = $xmldoc->createElement('DigestValue', $digValue);
+            $Reference->appendChild($newNode);
+            //extrai e canoniza os dados a serem assinados para uma string
+            $dados = $SignedInfo->C14N(false, false, null, null);
+            //inicializa a variavel que irá receber a assinatura
+            $signature = '';
+            //executa a assinatura digital usando o resource da chave privada
+            openssl_sign($dados, $signature, $pkeyid);
+            //codifica assinatura para o padrão base64
+            $signatureValue = base64_encode($signature);
+            //insere o valor da assinatura digtal
+            $newNode = $xmldoc->createElement('SignatureValue', $signatureValue);
+            $Signature->appendChild($newNode);
+            //insere a chave publica usada para conferencia da assinatura digital
+            $KeyInfo = $xmldoc->createElement('KeyInfo');
+            $Signature->appendChild($KeyInfo);
+            //X509Data
+            $X509Data = $xmldoc->createElement('X509Data');
+            $KeyInfo->appendChild($X509Data);
+            //carrega o certificado sem as tags de inicio e fim
+            $cert = $nfeHelper->pCleanCerts($certificado['pubKey']);
+            //X509Certificate
+            $newNode = $xmldoc->createElement('X509Certificate', $cert);
+            $X509Data->appendChild($newNode);
+            //grava em uma string o objeto DOM
+            $xml = $xmldoc->saveXML();
+            //libera a chave privada da memoria
+            openssl_free_key($pkeyid);
+            if($operacao == 'inutilizar') {
+                return $xml;
+            }
+            // Salva o XML
+            if($nfe->getTpNf() == '0') {
+                $tipo = 'entrada';
+            } else {
+                $tipo = 'saida';
+            }
+            $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS;
+            $this->salvarXml($xml, $caminho, $nfe->getIdTag());
+        } catch (Exception $e) {
+            Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            return false;
+        }
+        return 'sucesso';
+    } //fim signXML
+    
+    /**
+     * M�todo pertence a classe ToolsNFePHP.class.php do projeto NFE-PHP
+     * validXML
+     * Verifica o xml com base no xsd
+     * Esta função pode validar qualquer arquivo xml do sistema de NFe
+     * Há um bug no libxml2 para versões anteriores a 2.7.3
+     * que causa um falso erro na validação da NFe devido ao
+     * uso de uma marcação no arquivo tiposBasico_v1.02.xsd
+     * onde se le {0 , } substituir por *
+     * A validação não deve ser feita após a inclusão do protocolo !!!
+     * Caso seja passado uma NFe ainda não assinada a falta da assinatura será desconsiderada.
+     * @name validXML
+     * @author Roberto L. Machado <linux.rlm at gmail dot com>
+     * @param    string  $xml  string contendo o arquivo xml a ser validado ou seu path
+     * @param    string  $xsdfile Path completo para o arquivo xsd
+     * @param    array   $aError Variável passada como referencia irá conter as mensagens de erro se houverem
+     * @return   boolean
+     */
+    public function validarXml($xml = '', $xsdFile = '', &$aError = array()) {
+        try {
+            $flagOK = true;
+            // Habilita a manipulaçao de erros da libxml
+            libxml_use_internal_errors(true);
+            //limpar erros anteriores que possam estar em memória
+            libxml_clear_errors();
+            //verifica se foi passado o xml
+            if (strlen($xml)==0) {
+                $msg = 'Você deve passar o conteudo do xml assinado como parâmetro '
+                       .'ou o caminho completo até o arquivo.';
+                return $msg;
+            }
+            // instancia novo objeto DOM
+            $dom = new DOMDocument('1.0', 'utf-8');
+            $dom->preserveWhiteSpace = false; //elimina espaços em branco
+            $dom->formatOutput = false;
+            // carrega o xml tanto pelo string contento o xml como por um path
+            if (is_file($xml)) {
+                $dom->load($xml, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            } else {
+                $dom->loadXML($xml, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            }
+            // pega a assinatura
+            $Signature = $dom->getElementsByTagName('Signature')->item(0);
+            //recupera os erros da libxml
+            $errors = libxml_get_errors();
+            if (!empty($errors)) {
+                //o dado passado como $docXml não é um xml
+                $msg = 'O dado informado não é um XML ou não foi encontrado. '
+                        . 'Você deve passar o conteudo de um arquivo xml assinado como parâmetro.';
+                return $msg;
+            }
+            if ($xsdFile=='') {
+                if (is_file($xml)) {
+                    $contents = file_get_contents($xml);
+                } else {
+                    $contents = $xml;
+                }
+                $sxml = simplexml_load_string($contents);
+                $nome = $sxml->getName();
+                $sxml = null;
+                //determinar qual o arquivo de schema válido
+                //buscar o nome do scheme
+                switch ($nome) {
+                    case 'evento':
+                        //obtem o node com a versão
+                        $node = $dom->documentElement;
+                        //obtem a versão do layout
+                        $ver = trim($node->getAttribute("versao"));
+                        $tpEvento = $node->getElementsByTagName('tpEvento')->item(0)->nodeValue;
+                        switch ($tpEvento) {
+                            case '110110':
+                                //carta de correção
+                                $xsdFile = "CCe_v$ver.xsd";
+                                break;
+                            default:
+                                $xsdFile = "";
+                                break;
+                        }
+                        break;
+                    case 'envEvento':
+                        //obtem o node com a versão
+                        $node = $dom->getElementsByTagName('evento')->item(0);
+                        //obtem a versão do layout
+                        $ver = trim($node->getAttribute("versao"));
+                        $tpEvento = $node->getElementsByTagName('tpEvento')->item(0)->nodeValue;
+                        switch ($tpEvento) {
+                            case '110110':
+                                //carta de correção
+                                $xsdFile = "envCCe_v$ver.xsd";
+                                break;
+                            default:
+                                $xsdFile = "envEvento_v$ver.xsd";
+                                break;
+                        }
+                        break;
+                    case 'NFe':
+                        //obtem o node com a versão
+                        $node = $dom->getElementsByTagName('infNFe')->item(0);
+                        //obtem a versão do layout
+                        $ver = trim($node->getAttribute("versao"));
+                        $xsdFile = "nfe_v$ver.xsd";
+                        break;
+                    case 'nfeProc':
+                        //obtem o node com a versão
+                        $node = $dom->documentElement;
+                        //obtem a versão do layout
+                        $ver = trim($node->getAttribute("versao"));
+                        $xsdFile = "procNFe_v$ver.xsd";
+                        break;
+                    default:
+                        //obtem o node com a versão
+                        $node = $dom->documentElement;
+                        //obtem a versão do layout
+                        $ver = trim($node->getAttribute("versao"));
+                        $xsdFile = $nome."_v".$ver.".xsd";
+                        break;
+                }
+                $schemeVersion = 'PL_008e';
+                $diretorio = Mage::getBaseDir(). DS . 'nfe' . DS . 'schemes' . DS . $schemeVersion . DS;
+                $aFile = $diretorio.$xsdFile;
+                if (empty($aFile) || empty($aFile[0])) {
+                    $msg = "Erro na localização do schema xsd.\n";
+                    return $msg;
+                } else {
+                    $xsdFile = $aFile;
+                }
+            }
+            //limpa erros anteriores
+            libxml_clear_errors();
+            // valida o xml com o xsd
+            if (!$dom->schemaValidate($xsdFile)) {
+                /**
+                 * Se não foi possível validar, você pode capturar
+                 * todos os erros em um array
+                 * Cada elemento do array $arrayErrors
+                 * será um objeto do tipo LibXmlError
+                 */
+                // carrega os erros em um array
+                $aIntErrors = libxml_get_errors();
+                $flagOK = false;
+                if (!isset($Signature)) {
+                    // remove o erro de falta de assinatura
+                    foreach ($aIntErrors as $k => $intError) {
+                        if (strpos($intError->message, '( {http://www.w3.org/2000/09/xmldsig#}Signature )') !== false) {
+                            // remove o erro da assinatura, se tiver outro meio melhor (atravez dos erros de codigo) e alguem souber como tratar por eles, por favor contribua...
+                            unset($aIntErrors[$k]);
+                        }
+                    }
+                    reset($aIntErrors);
+                    $flagOK = true;
+                }//fim teste Signature
+                $msg = '';
+                foreach ($aIntErrors as $intError) {
+                    $flagOK = false;
+                    $en = array("{http://www.portalfiscal.inf.br/nfe}"
+                                ,"[facet 'pattern']"
+                                ,"The value"
+                                ,"is not accepted by the pattern"
+                                ,"has a length of"
+                                ,"[facet 'minLength']"
+                                ,"this underruns the allowed minimum length of"
+                                ,"[facet 'maxLength']"
+                                ,"this exceeds the allowed maximum length of"
+                                ,"Element"
+                                ,"attribute"
+                                ,"is not a valid value of the local atomic type"
+                                ,"is not a valid value of the atomic type"
+                                ,"Missing child element(s). Expected is"
+                                ,"The document has no document element"
+                                ,"[facet 'enumeration']"
+                                ,"one of"
+                                ,"failed to load external entity"
+                                ,"Failed to locate the main schema resource at"
+                                ,"This element is not expected. Expected is"
+                                ,"is not an element of the set");
+
+                    $pt = array(""
+                                ,"[Erro 'Layout']"
+                                ,"O valor"
+                                ,"não é aceito para o padrão."
+                                ,"tem o tamanho"
+                                ,"[Erro 'Tam. Min']"
+                                ,"deve ter o tamanho mínimo de"
+                                ,"[Erro 'Tam. Max']"
+                                ,"Tamanho máximo permitido"
+                                ,"Elemento"
+                                ,"Atributo"
+                                ,"não é um valor válido"
+                                ,"não é um valor válido"
+                                ,"Elemento filho faltando. Era esperado"
+                                ,"Falta uma tag no documento"
+                                ,"[Erro 'Conteúdo']"
+                                ,"um de"
+                                ,"falha ao carregar entidade externa"
+                                ,"Falha ao tentar localizar o schema principal em"
+                                ,"Este elemento não é esperado. Esperado é"
+                                ,"não é um dos seguintes possiveis");
+
+                    switch ($intError->level) {
+                        case LIBXML_ERR_WARNING:
+                            $aError[] = " Atençao $intError->code: ".str_replace($en, $pt, $intError->message);
+                            break;
+                        case LIBXML_ERR_ERROR:
+                            $aError[] = " Erro $intError->code: ".str_replace($en, $pt, $intError->message);
+                            break;
+                        case LIBXML_ERR_FATAL:
+                            $aError[] = " Erro Fatal $intError->code: ".str_replace($en, $pt, $intError->message);
+                            break;
+                    }
+                    $msg .= str_replace($en, $pt, $intError->message);
+                }
+            } else {
+                $flagOK = true;
+            }
+            if (!$flagOK) {
+                return $msg;
+            }
+        } catch (nfephpException $e) {
+            Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            return false;
+        }
+        return 'sucesso';
+    } //fim validXML
+    
+    /**
+     * Solicita inutilizaçaao de uma série de números de NF. O processo de inutilização
+     * será gravado na "pasta Inutilizadas".
+     * 
+     * ATENÇÃO: este webservice *não* é oferecido pelas SVC (Sefaz Virtual de Contingência)
+     * conforme NT 2013.007 versão "1.02" de Dezembro/2013.
+     *
+     * @name inutNF
+     * @param string  $nAno     ano com 2 digitos
+     * @param string  $nSerie   serie da NF 1 até 3 digitos
+     * @param integer $nIni     numero inicial 1 até 9 digitos zero a esq
+     * @param integer $nFin     numero Final 1 até 9 digitos zero a esq
+     * @param string  $xJust    justificativa 15 até 255 digitos
+     * @param string  $tpAmb    Tipo de ambiente 1-produção ou 2 homologação
+     * @param array   $aRetorno Array com os dados de Retorno
+     * @return mixed false ou string com o xml do processo de inutilização
+     */
+    public function inutNF($nAno = '', $nSerie = '1', $nIni = '', $nFin = '', $xJust = '', $tpAmb = '', &$aRetorno = array(), $siglaUf, $ufEmitente, $modeloNf, $cnpjEmitente)
+    {
+        $xmlInutilizado = array();
+        //retorno da função
+        $aRetorno = array(
+            'bStat'=>false,
+            'tpAmb'=>'',
+            'verAplic'=>'',
+            'cStat'=>'',
+            'xMotivo'=>'',
+            'cUF'=>'',
+            'ano'=>'',
+            'CNPJ'=>'',
+            'mod'=>'',
+            'serie'=>'',
+            'nNFIni'=>'',
+            'nNFFin'=>'',
+            'dhRecbto'=>'',
+            'nProt'=>'');
+        //valida dos dados de entrada
+        if ($nAno == '' || $nIni == '' || $nFin == '' || $xJust == '') {
+            $msg = "Não foi passado algum dos parametos necessários ANO=$nAno inicio=$nIni "
+                   ."fim=$nFin justificativa=$xJust.\n";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //valida justificativa
+        if (strlen($xJust) < 15) {
+            $msg = "A justificativa deve ter pelo menos 15 digitos!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        if (strlen($xJust) > 255) {
+            $msg = "A justificativa deve ter no máximo 255 digitos!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //remove acentos e outros caracteres da justificativa
+        $xJust = $this->pCleanString($xJust);
+        // valida o campo ano
+        if (strlen($nAno) > 2) {
+            $msg = "O ano tem mais de 2 digitos. Corrija e refaça o processo!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        } else {
+            if (strlen($nAno) < 2) {
+                $msg = "O ano tem menos de 2 digitos. Corrija e refaça o processo!!";
+                $xmlInutilizado['retorno'] = $msg;
+                return $xmlInutilizado;
+            }
+        }
+        //valida o campo serie
+        if (strlen($nSerie) == 0 || strlen($nSerie) > 3) {
+            $msg = "O campo serie está errado: $nSerie. Corrija e refaça o processo!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //valida o campo numero inicial
+        if (strlen($nIni) < 1 || strlen($nIni) > 9) {
+            $msg = "O campo numero inicial está errado: $nIni. Corrija e refaça o processo!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //valida o campo numero final
+        if (strlen($nFin) < 1 || strlen($nFin) > 9) {
+            $msg = "O campo numero final está errado: $nFin. Corrija e refaça o processo!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //valida contingencias, nao podem estar habilitadas pois este serviço não se aplica para SVC
+        if ($this->enableSVCAN || $this->enableSVCRS) {
+            $msg = "Inutilizacao nao pode ser usada em contingencia SVC!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        /*
+        //valida tipo de ambiente
+        if ($tpAmb == '') {
+            $tpAmb = $this->tpAmb;
+        }
+        if ($tpAmb == $this->tpAmb) {
+            $aURL = $this->aURL;
+        } else {
+            $aURL = $this->pLoadSEFAZ($tpAmb, $this->siglaUF);
+        }
+         */
+        if (!$aURL = $this->pLoadSEFAZ($tpAmb, $siglaUf)) {
+            $msg = "Erro no carregamento das informacoes da SEFAZ";
+            $protocolo['retorno'] = $msg;
+            return $protocolo;
+        }
+        //identificação do serviço
+        $servico = 'NfeInutilizacao';
+        //recuperação da versão
+        $versao = $aURL[$servico]['version'];
+        //recuperação da url do serviço
+        $urlservico = $aURL[$servico]['URL'];
+        //recuperação do método
+        $metodo = $aURL[$servico]['method'];
+        //montagem do namespace do serviço
+        $namespace = $this->URLPortal.'/wsdl/'.$servico.'2';
+        //Identificador da TAG a ser assinada formada com Código da UF +
+        //Ano (2 posições) + CNPJ + modelo + série + nro inicial e nro final
+        //precedida do literal “ID”
+        // 43 posições
+        //     2      4       6       20      22    25       34      43
+        //     2      2       2       14       2     3        9       9
+        $id = 'ID'
+                . $ufEmitente
+                . $nAno
+                . $cnpjEmitente
+                . $modeloNf
+                . str_pad($nSerie, 3, '0', STR_PAD_LEFT)
+                . str_pad($nIni, 9, '0', STR_PAD_LEFT)
+                . str_pad($nFin, 9, '0', STR_PAD_LEFT);
+        //montagem do cabeçalho da comunicação SOAP
+        $cabec = '<nfeCabecMsg xmlns="'.$namespace.'"><cUF>'
+                . $ufEmitente.'</cUF><versaoDados>'.$versao.'</versaoDados></nfeCabecMsg>';
+        //montagem do corpo da mensagem
+        $dXML = '<inutNFe xmlns="'.$this->URLnfe.'" versao="'.$versao.'">';
+        $dXML .= '<infInut Id="'.$id.'">';
+        $dXML .= '<tpAmb>'.$tpAmb.'</tpAmb>';
+        $dXML .= '<xServ>INUTILIZAR</xServ>';
+        $dXML .= '<cUF>'.$ufEmitente.'</cUF>';
+        $dXML .= '<ano>'.$nAno.'</ano>';
+        $dXML .= '<CNPJ>'.$cnpjEmitente.'</CNPJ>';
+        $dXML .= '<mod>55</mod>';
+        $dXML .= '<serie>'.$nSerie.'</serie>';
+        $dXML .= '<nNFIni>'.$nIni.'</nNFIni>';
+        $dXML .= '<nNFFin>'.$nFin.'</nNFFin>';
+        $dXML .= '<xJust>'.$xJust.'</xJust>';
+        $dXML .= '</infInut>';
+        $dXML .= '</inutNFe>';
+        //assina a lsolicitação de inutilização
+        //ADICIONAR NESTE PONTO CHAMADA AO M�TODO ASSINARXML() DE NFERN QUE RETORNA UM SUCESSO E J� PERSISTE O XML QUE DEPOIS PRECISA SER RECUPERADO - FAZER ALTERA��O PARA PASSAGEM DE PARAMETRO QUE INFORMA INUTILIZA��O PARA ENT�O RETORNAR A STRING DO XML VIA RETURN E SAIR DO M�TODO SEM SALVAR O XML NAQUELE PONTO
+        $dXML = $this->assinarXML($dXML, 'infInut', '', 'inutilizar');
+        $dados = '<nfeDadosMsg xmlns="'.$namespace.'">'.$dXML.'</nfeDadosMsg>';
+        //remove as tags xml que porventura tenham sido inclusas
+        $dados = $this->pClearXml($dados, true);
+        /*
+        //grava a solicitação de inutilização
+        if (!file_put_contents($this->temDir.$id.'-pedInut.xml', $dXML)) {
+            $msg = "Falha na gravacao do pedido de inutilização!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+         * 
+         */
+        //envia a solicitação via SOAP
+        $retorno = $this->pSendSOAP($urlservico, $namespace, $cabec, $dados, $metodo, $tpAmb);
+        //verifica o retorno
+        if (!$retorno) {
+            $msg = "Nao houve retorno Soap verifique o debug!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //tratar dados de retorno
+        $doc = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+        $doc->formatOutput = false;
+        $doc->preserveWhiteSpace = false;
+        $doc->loadXML($retorno['valor'], LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $cStat = !empty($doc->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                $doc->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+        $xMotivo = !empty($doc->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                $doc->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+        // tipo de ambiente
+        $aRetorno['tpAmb'] = $doc->getElementsByTagName('tpAmb')->item(0)->nodeValue;
+        // verssão do aplicativo
+        $aRetorno['verAplic'] = $doc->getElementsByTagName('verAplic')->item(0)->nodeValue;
+        // status do serviço
+        $aRetorno['cStat'] = $cStat;
+        // motivo da resposta (opcional)
+        $aRetorno['xMotivo'] = $xMotivo;
+        // Código da UF que atendeu a solicitação
+        $aRetorno['cUF'] = $doc->getElementsByTagName('cUF')->item(0)->nodeValue;
+        // Ano de inutilização da numeração
+        $aRetorno['ano'] = $doc->getElementsByTagName('ano')->item(0)->nodeValue;
+        // CNPJ do emitente
+        $aRetorno['CNPJ'] = $doc->getElementsByTagName('CNPJ')->item(0)->nodeValue;
+        // Modelo da NF-e
+        $aRetorno['mod'] = $doc->getElementsByTagName('mod')->item(0)->nodeValue;
+        // Série da NF-e
+        $aRetorno['serie'] = $doc->getElementsByTagName('serie')->item(0)->nodeValue;
+        // Número da NF-e inicial a ser inutilizada
+        $aRetorno['nNFIni'] = $doc->getElementsByTagName('nNFIni')->item(0)->nodeValue;
+        // Número da NF-e final a ser inutilizada
+        $aRetorno['nNFFin'] = $doc->getElementsByTagName('nNFFin')->item(0)->nodeValue;
+        // data e hora do retorno a operação (opcional)
+        $aRetorno['dhRecbto'] = !empty($doc->getElementsByTagName('dhRecbto')->item(0)->nodeValue) ?
+                                 date("d/m/Y H:i:s", $this->pConvertTime($doc->getElementsByTagName('dhRecbto')->item(0)->nodeValue)) : '';
+        // Número do Protocolo de Inutilização
+        $aRetorno['nProt'] = $doc->getElementsByTagName('nProt')->item(0)->nodeValue;
+        if ($cStat == '') {
+            //houve erro
+            $msg = "Nao houve retorno Soap verifique o debug!!";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        //verificar o status da solicitação
+        if ($cStat != '102') {
+            //houve erro
+            $msg = "Rejeição : $cStat - $xMotivo";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+        $aRetorno['bStat'] = true;
+        //gravar o retorno na pasta temp
+        /*
+        $nome = $this->temDir.$id.'-retInut.xml';
+        $nome = $doc->save($nome);
+         */
+        $retInutNFe = $doc->getElementsByTagName("retInutNFe")->item(0);
+        //preparar o processo de inutilização
+        $inut = new DOMDocument('1.0', 'utf-8');
+        $inut->formatOutput = false;
+        $inut->preserveWhiteSpace = false;
+        $inut->loadXML($dXML, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $inutNFe = $inut->getElementsByTagName("inutNFe")->item(0);
+        //Processo completo solicitação + protocolo
+        $procInut = new DOMDocument('1.0', 'utf-8');
+        $procInut->formatOutput = false;
+        $procInut->preserveWhiteSpace = false;
+        //cria a tag procInutNFe
+        $procInutNFe = $procInut->createElement('procInutNFe');
+        $procInut->appendChild($procInutNFe);
+        //estabele o atributo de versão
+        $inutProc_att1 = $procInutNFe->appendChild($procInut->createAttribute('versao'));
+        $inutProc_att1->appendChild($procInut->createTextNode($versao));
+        //estabelece o atributo xmlns
+        $inutProc_att2 = $procInutNFe->appendChild($procInut->createAttribute('xmlns'));
+        $inutProc_att2->appendChild($procInut->createTextNode($this->URLPortal));
+        //carrega o node cancNFe
+        $node1 = $procInut->importNode($inutNFe, true);
+        $procInutNFe->appendChild($node1);
+        //carrega o node retEvento
+        $node2 = $procInut->importNode($retInutNFe, true);
+        $procInutNFe->appendChild($node2);
+        //salva o xml como string em uma variável
+        $procXML = $procInut->saveXML();
+        //remove as informações indesejadas
+        $procXML  = $this->pClearXml($procXML, false);
+        /*
+        //salva o arquivo xml
+        if (! file_put_contents($this->inuDir."$id-procInut.xml", $procXML)) {
+            $msg = "Falha na gravacao da procInut!!\n";
+            $xmlInutilizado['retorno'] = $msg;
+            return $xmlInutilizado;
+        }
+         */
+        $xmlInutilizado['retorno'] = 'sucesso';
+        $xmlInutilizado['xml'] = $procXML;
+        return $xmlInutilizado;
+    } //fim inutNFe
+    
+    /**
      * loadSEFAZ
      * Extrai o URL, nome do serviço e versão dos webservices das SEFAZ de
      * todos os Estados da Federação, a partir do arquivo XML de configurações,
@@ -1536,6 +2201,19 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfe->save();
     }
     
+    public function setRetirado($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
+        $order->setData('status', 'nfe_retirada');
+        $order->addStatusToHistory(nfe_retirada, 
+        'O processo de retirada da Nota Fiscal Eletrõnica (NF-e) foi completado e o número inutilizado.<br/>
+         Status: Inutilizado');
+        $order->save();
+        $nfe->setStatus('9');
+        $nfe->setMensagem(utf8_encode('A NF-e foi retirada e o n�mero inutilizado'));
+        $nfe->save();
+    }
+    
     public function getDownloads($nfe) {
         $downloadsDetalhes = array();
         if($nfe->getTpNf() == '0') {
@@ -1550,4 +2228,64 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         
         return $downloadsDetalhes;
     }
+    
+    public function salvarXml($xmlNfe, $caminho, $idTag) {
+        $doc = new DOMDocument("1.0", "UTF-8");
+        $doc->preservWhiteSpace = false; //elimina espaços em branco
+        $doc->formatOutput = false;
+        $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $doc->save($caminho.$idTag.'.xml');
+    }
+    
+    public function salvarXmlInutilizado($xmlNfe, $nfe) {
+        $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . 'inutilizado' . DS;
+        $doc = new DOMDocument("1.0", "UTF-8");
+        $doc->preservWhiteSpace = false; //elimina espaços em branco
+        $doc->formatOutput = false;
+        $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $doc->save($caminho.$nfe->getIdTag().'.xml');
+    }
+    
+    /**
+     * pClearXml
+     * Remove \r \n \s \t 
+     * @param string $xml
+     * @param boolean $remEnc remover encoding
+     * @return string
+     */
+    private function pClearXml($xml = '', $remEnc = false)
+    {
+        $retXml = $xml;
+        if ($remEnc) {
+            $retXml = str_replace('<?xml version="1.0"?>', '', $retXml);
+            $retXml = str_replace('<?xml version="1.0" encoding="utf-8"?>', '', $retXml);
+            $retXml = str_replace('<?xml version="1.0" encoding="UTF-8"?>', '', $retXml);
+        }
+        $retXml = str_replace("xmlns:default=\"http://www.w3.org/2000/09/xmldsig#\"", '', $retXml);
+        $retXml = str_replace('default:', '', $retXml);
+        $retXml = str_replace(':default', '', $retXml);
+        $retXml = str_replace("\n", '', $retXml);
+        $retXml = str_replace("\r", '', $retXml);
+        $retXml = str_replace("\s", '', $retXml);
+        $retXml = str_replace("\t", '', $retXml);
+        return $retXml;
+    }
+    
+    /**
+     * cleanString
+     * Remove todos dos caracteres espceiais do texto e os acentos
+     *
+     * @name cleanString
+     * @return  string Texto sem caractere especiais
+     */
+    private function pCleanString($texto)
+    {
+        $aFind = array('&','á','à','ã','â','é','ê','í','ó','ô','õ','ú','ü',
+            'ç','Á','À','Ã','Â','É','Ê','Í','Ó','Ô','Õ','Ú','Ü','Ç');
+        $aSubs = array('e','a','a','a','a','e','e','i','o','o','o','u','u',
+            'c','A','A','A','A','E','E','I','O','O','O','U','U','C');
+        $novoTexto = str_replace($aFind, $aSubs, $texto);
+        $novoTexto = preg_replace("/[^a-zA-Z0-9 @,-.;:\/]/", "", $novoTexto);
+        return $novoTexto;
+    }//fim cleanString
 }

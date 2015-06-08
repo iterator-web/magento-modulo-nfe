@@ -66,6 +66,9 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_AcaoStatus extends Mage_Adminhtml_Block_W
             case 8:
                 $descricao = '<strong style="color:#995015;">DENEGADO</strong>';
                 break;
+            case 9:
+                $descricao = '<strong style="color:#157f99;">INUTILIZADO</strong>';
+                break;
             default:
                 break;
         }
