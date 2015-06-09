@@ -46,8 +46,12 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_
             $adminUrl = Mage::helper('adminhtml')->getUrl('*/nfe/consultarNfe');
             $skinUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_SKIN);
             $acao = '<a href="javascript:carregarNfe(\''.$adminUrl.'\', \''.$skinUrl.'\', \''.$nfeId.'\', \''.$nNf.'\')">Visualizar Detalhes</a>';
-        } else if($status == '3' || $status == '7' && $order->getStatus() != 'complete') {
+        } else if($status == '3') {
             $acao = '<a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
+        } else if($status == '7' && $status == '7' && $order->getStatus() != 'complete') {
+            $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/').'\');window.open(\''.Mage::helper('adminhtml')->getUrl('*/nfe/imprimir/')."nfe_id/".$nfeId.'\', \'_blank\');">Imprimir</a> | <a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
+        } else if($status == '7' && $status == '7' && $order->getStatus() == 'complete') {
+            $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/').'\');window.open(\''.Mage::helper('adminhtml')->getUrl('*/nfe/imprimir/')."nfe_id/".$nfeId.'\', \'_blank\');">Imprimir</a>';
         }
         return $acao;
     }

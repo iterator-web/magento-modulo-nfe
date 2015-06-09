@@ -48,8 +48,8 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
             } else if($nfe->getStatus() == '3') {
                 $nfeHelper = Mage::Helper('nfe/nfeHelper');
                 $xmlNfe = $nfeHelper->getXmlNfe($nfe);
-                $sXml = $this->xmlString($xmlNfe);
-                $nfeHelper->gerarDanfe($sXml, $nfe);
+                $sXml = $nfeHelper->xmlString($xmlNfe);
+                $nfeHelper->gerarDanfe($sXml, $nfe, 'F');
                 $nfeHelper->enviarEmail($nfe);
                 $nfeHelper->setCompleto($nfe);
             } else if($nfe->getStatus() == '2') {
@@ -75,7 +75,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                         $nfe->setStatus('3');
                         $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                         $nfe->save();
-                        $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe);
+                        $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe, 'F');
                         $nfeHelper->enviarEmail($nfe);
                         $nfeHelper->setCompleto($nfe);
                     } else {
@@ -123,7 +123,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             $nfe->setStatus('3');
                             $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                             $nfe->save();
-                            $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe);
+                            $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe, 'F');
                             $nfeHelper->enviarEmail($nfe);
                             $nfeHelper->setCompleto($nfe);
                         } else {
@@ -181,16 +181,6 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
         $doc->formatOutput = false;
         $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
         $doc->save($caminho.$nfe->getIdTag().'.xml');
-    }
-    
-    private function xmlString($xmlNfe) {
-        $aNFe = file_get_contents($xmlNfe);
-        $xmldoc = new DOMDocument('1.0', 'utf-8');
-        $xmldoc->preservWhiteSpace = false; //elimina espaÃ§os em branco
-        $xmldoc->formatOutput = false;
-        $xmldoc->loadXML($aNFe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
-        $sXml = $xmldoc->saveXML();
-        return $sXml;
     }
 }
 

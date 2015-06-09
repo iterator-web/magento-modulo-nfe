@@ -1045,6 +1045,15 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         return;
     }
     
+    public function imprimirAction() {
+        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $nfeId = $this->getRequest()->getParam('nfe_id');
+        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+        $xmlNfe = $nfeHelper->getXmlNfe($nfe);
+        $sXml = $nfeHelper->xmlString($xmlNfe);
+        $nfeHelper->gerarDanfe($sXml, $nfe, 'I');
+    }
+    
     protected function _isAllowed() {
         return Mage::getSingleton('admin/session')->isAllowed('catalog/controleestoque');
     }
@@ -1121,7 +1130,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     <div style="float:left; width:140px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVNf(), true, false).'</div>
                   </li>';
         $html .= '</ul>';
-        $html .= '<div style="padding:30px 0; min-height:280px;">';
+        $html .= '<div style="padding:30px 0;">';
         $html .= '<ul>';
         $html .= '<li><strong>Itens da Entrada:</strong></li>';
         $html .= utf8_encode('
@@ -1159,6 +1168,20 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
         $html .= '</ul>';
         $html .= '</div>';
+        if($nfe->getStatus() == '7') {
+            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, false);
+            $html .= '<div style="margin:20px 0 60px 0;">';
+            $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['pdf_url'].'\');"><span>Download da DANFE</span></button>');
+            $html .= utf8_encode('<button style="float:right; margin-right:10px;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');
+            $html .= '</div>';
+        } else if($nfe->getStatus() == '9') {
+            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, true);
+            $html .= '<div style="margin:20px 0 60px 0;">';
+            $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');
+            $html .= '</div>';
+        }
         
         $this->getResponse()->setBody($html);
     }

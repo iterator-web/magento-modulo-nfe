@@ -2140,7 +2140,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         return $xml; 
     }
     
-    public function gerarDanfe($xmlNfe, $nfe) {
+    public function gerarDanfe($xmlNfe, $nfe, $acao) {
         if($nfe->getTpNf() == '0') {
             $tipo = 'entrada';
         } else {
@@ -2152,18 +2152,17 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         } else {
             $formato = 'L';
         }
-        $logo = $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
+        $logo = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
         $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . $tipo . DS . $nfe->getIdTag().'.pdf';
-        $xml = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag().'.xml';
         $nfeDanfe = Mage::Helper('nfe/pdf_nfeDanfe');
         $nfeDanfe->init($xmlNfe, $formato, 'A4', $logo, 'I', '');
         $nfeDanfe->montaDANFE($formato, 'A4', 'C');
-        $nfeDanfe->printDANFE($pdf, 'F');
+        $nfeDanfe->printDANFE($pdf, $acao);
     }
     
     public function enviarEmail($nfe) {
         $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
-        $downloadsDetalhes = $this->getDownloads($nfe);
+        $downloadsDetalhes = $this->getDownloads($nfe, false);
         $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
         Mage::getModel('core/email_template')
             ->setDesignConfig(array(
@@ -2214,9 +2213,11 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfe->save();
     }
     
-    public function getDownloads($nfe) {
+    public function getDownloads($nfe, $inutilizado) {
         $downloadsDetalhes = array();
-        if($nfe->getTpNf() == '0') {
+        if($inutilizado) {
+            $tipo = 'inutilizado';
+        } else if($nfe->getTpNf() == '0') {
             $tipo = 'entrada';
         } else {
             $tipo = 'saida';
@@ -2227,6 +2228,16 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $downloadsDetalhes['xml_img'] = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'xml_logo.png';
         
         return $downloadsDetalhes;
+    }
+    
+    public function xmlString($xmlNfe) {
+        $aNFe = file_get_contents($xmlNfe);
+        $xmldoc = new DOMDocument('1.0', 'utf-8');
+        $xmldoc->preservWhiteSpace = false; //elimina espaços em branco
+        $xmldoc->formatOutput = false;
+        $xmldoc->loadXML($aNFe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $sXml = $xmldoc->saveXML();
+        return $sXml;
     }
     
     public function salvarXml($xmlNfe, $caminho, $idTag) {
