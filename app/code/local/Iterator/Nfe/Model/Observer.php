@@ -93,6 +93,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             strpos($protocolo['retorno'],'234') !== false || strpos($protocolo['retorno'],'301') !== false || strpos($protocolo['retorno'],'302') !== false) {
                         $nfe->setStatus('8');
                         $nfe->setMensagem(utf8_encode('A utilização da NF-e foi denegada. Erro: '.utf8_decode($protocolo['retorno'])));
+                        $nfeHelper->setDenegado($nfe);
                     } else {
                         $nfe->setStatus('4');
                         $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));
@@ -147,6 +148,7 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             strpos($protocolo['retorno'],'234') !== false || strpos($protocolo['retorno'],'301') !== false || strpos($protocolo['retorno'],'302') !== false) {
                         $nfe->setStatus('8');
                         $nfe->setMensagem(utf8_encode('A utilização da NF-e foi denegada. Erro: '.utf8_decode($protocolo['retorno'])));
+                        $nfeHelper->setDenegado($nfe);
                     } else {
                         $nfe->setStatus('4');
                         $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($protocolo['retorno'])));

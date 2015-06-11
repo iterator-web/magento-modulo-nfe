@@ -2492,6 +2492,16 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfe->save();
     }
     
+    public function setDenegado($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
+        $order->setData('status', 'nfe_denegada');
+        $order->addStatusToHistory(nfe_denegada, 
+        'O processo de emissão da Nota Fiscal Eletrõnica (NF-e) não foi completado, pois o pedido de emissão foi denegado.<br/>
+         Status: Denegado');
+        $order->save();
+    }
+    
     public function getDownloads($nfe, $inutilizado) {
         $downloadsDetalhes = array();
         if($inutilizado) {

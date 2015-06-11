@@ -6088,6 +6088,9 @@ $status->setStatus('nfe_cancelada')->setLabel('NF-e Cancelada')
 $status->setStatus('nfe_retirada')->setLabel('NF-e Retirada')
     ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
     ->save();
+$status->setStatus('nfe_denegada')->setLabel('NF-e Denegada')
+    ->assignState(Mage_Sales_Model_Order::STATE_PROCESSING)
+    ->save();
 
 $resource = Mage::getSingleton('core/resource');
 $readConnection = $resource->getConnection('core_read');
