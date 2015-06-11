@@ -271,4 +271,17 @@ class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
         }
     }
 
+    public function getHoraCerta($dataParam) {
+        $dataReturn = date_create($dataParam, timezone_open('GMT'));
+        date_timezone_set($dataReturn, timezone_open('America/Sao_Paulo'));
+        $dataReturn = (date_format($dataReturn, 'Y-m-d H:i:s'));
+        return $dataReturn;
+    }
+    
+    public function getHoraServidor($dataParam) {
+        $dataReturn = date_create($dataParam, timezone_open('America/Sao_Paulo'));
+        date_timezone_set($dataReturn, timezone_open('GMT'));
+        $dataReturn = (date_format($dataReturn, 'Y-m-d H:i:s'));
+        return $dataReturn;
+    }
 }

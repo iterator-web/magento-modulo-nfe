@@ -545,6 +545,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     }
     
     private function preencherCampos($nfe, $nfeCriarXML) {
+        $validarCampos = Mage::helper('nfe/ValidarCampos');
         $nfeId = $nfe->getNfeId();
         //Numero e versão da NFe (infNFe)
         $chave = substr($nfe->getIdTag(),3);
@@ -559,8 +560,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $mod = $nfe->getMod(); //modelo da NFe 55 ou 65 essa última NFCe
         $serie = strval(intval($nfe->getSerie())); //serie da NFe
         $nNF = strval(intval($nfe->getNNf())); // numero da NFe
-        $dhEmi = str_replace(' ', 'T', $nfe->getDhEmi()).'-03:00';  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
-        $dhSaiEnt = str_replace(' ', 'T', $nfe->getDhSaiEnt()).'-03:00'; //versão 2.00, 3.00 e 3.10
+        $dhEmi = $validarCampos->getHoraCerta($nfe->getDhEmi());
+        $dhEmi = str_replace(' ', 'T', $dhEmi).'-03:00';  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
+        $dhSaiEnt = $validarCampos->getHoraCerta($nfe->getDhSaiEnt());
+        $dhSaiEnt = str_replace(' ', 'T', $dhSaiEnt).'-03:00'; //versão 2.00, 3.00 e 3.10
         $tpNF = $nfe->getTpNf();
         $idDest = $nfe->getIdDest(); //1=Operação interna; 2=Operação interestadual; 3=Operação com exterior.
         $cMunFG = $nfe->getCMunFg();
