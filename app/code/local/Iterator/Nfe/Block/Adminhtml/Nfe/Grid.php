@@ -43,6 +43,17 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
         $this->setDefaultDir('desc');
         $this->setSaveParametersInSession(true);
     }
+    
+    public function getMainButtonsHtml() {
+        $html = parent::getMainButtonsHtml();
+        $addButton = $this->getLayout()->createBlock('adminhtml/widget_button')
+            ->setData(array(
+                'label'     => Mage::helper('adminhtml')->__(utf8_encode('Gerenciar Range')),
+                'onclick'   => "setLocation('".$this->getUrl('*/*/editRange')."')",
+                'class'   => 'task'
+            ))->toHtml();
+        return $addButton.$html;
+    }
      
     protected function _getCollectionClass() {
         return 'nfe/nfe_collection';

@@ -1012,6 +1012,46 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $this->_redirect('*/sales_order/');
     }
     
+    public function editRangeAction() {
+        $model = Mage::getModel('nfe/nferange')->load('1');
+        $this->_title($model->getId() ? $model->getCodigo() : $this->__(utf8_encode('Gerenciar Range da NF-e')));
+        $data = Mage::getSingleton('adminhtml/session')->getAliquotaSn(true);
+        if (!empty($data)) {
+            $model->setData($data);
+        }
+        Mage::register('nfe_range', $model);
+        
+        $this->_initAction()
+            ->_addBreadcrumb($this->__(utf8_encode('Gerenciar Range da NF-e')))
+            ->_addContent($this->getLayout()->createBlock('nfe/adminhtml_nfe_range')->setData('action', $this->getUrl('*/*/saveRange')))
+            ->renderLayout();
+    }
+    
+    public function saveRangeAction() {
+        $postData = $this->getRequest()->getPost();
+        if ($postData) {
+            try {
+                $model = Mage::getModel('nfe/nferange');
+                $model->setRangeId('1');
+                $model->setNumero($postData['numero']);
+                $model->setSerie($postData['serie']);
+                $model->setValorInicio('1');
+                $model->save();
+                Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('Range da NF-e adicionada com sucesso.')));
+                $this->_redirect('*/*/');
+                return;
+            }
+            catch (Mage_Core_Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto a Range da NF-e era salva.'));
+            }
+            Mage::getSingleton('adminhtml/session')->setAliquotaSn($postData);
+            $this->_redirectReferer();
+        }
+    }
+    
     public function buscarProdutoAction() {
         $produtoId = (string) $this->getRequest()->getParam('produto');
         $product = Mage::getModel('catalog/product')->load($produtoId);
