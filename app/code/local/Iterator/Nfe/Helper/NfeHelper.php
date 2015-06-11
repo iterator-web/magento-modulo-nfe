@@ -220,6 +220,11 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
      * @var string
      */
     private $URLnfe = 'http://www.portalfiscal.inf.br/nfe';
+    /**
+     * timeZone
+     * Zona de tempo GMT
+     */
+    protected $timeZone = '-03:00';
     
     /**
      * loadCerts
@@ -1027,7 +1032,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
              */
             //protocolo de autorização
             //$protNFe = $prot->getElementsByTagName("protNFe")->item(0);
-            if ($acao = 'protNFe') {
+            if ($acao == 'protNFe') {
                 $protver     = $protNFeVersao;
                 $tpAmb       = $protocolo['tpAmb'];
                 $verAplic    = $protocolo['verAplic'];
@@ -1042,7 +1047,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
                     $xmlProtocolado['retorno'] = $msg;
                     return $xmlProtocolado;
                 }
-            } else if($acao = 'retCancNFe') {
+            } else if($acao == 'retCancNFe') {
                 //cancelamento antigo
                 //$retCancNFe = $prot->getElementsByTagName("retCancNFe")->item(0);
                 /*
@@ -1056,26 +1061,26 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
                 $xMotivo     = $retCancNFe->getElementsByTagName("xMotivo")->item(0)->nodeValue;
                 $digVal      = $DigestValue;
                  */
-            } else if($acao = 'retEvento') {
+            } else if($acao == 'retEvento') {
                 //cancelamento por evento NOVO
                 //$retEvento = $prot->getElementsByTagName("retEvento")->item(0);
-                /*
-                $protver     = trim($retEvento->getAttribute("versao"));
-                $tpAmb       = $retEvento->getElementsByTagName("tpAmb")->item(0)->nodeValue;
-                $verAplic    = $retEvento->getElementsByTagName("verAplic")->item(0)->nodeValue;
-                $chNFe       = $retEvento->getElementsByTagName("chNFe")->item(0)->nodeValue;
-                $dhRecbto    = $retEvento->getElementsByTagName("dhRegEvento")->item(0)->nodeValue;
-                $nProt       = $retEvento->getElementsByTagName("nProt")->item(0)->nodeValue;
-                $cStat       = $retEvento->getElementsByTagName("cStat")->item(0)->nodeValue;
-                $tpEvento    = $retEvento->getElementsByTagName("tpEvento")->item(0)->nodeValue;
-                $xMotivo     = $retEvento->getElementsByTagName("xMotivo")->item(0)->nodeValue;
+                $protver     = $protNFeVersao;
+                $tpAmb       = $protocolo['tpAmb'];
+                $verAplic    = $protocolo['verAplic'];
+                $chNFe       = $protocolo['chNFe'];
+                $dhRecbto    = str_replace(' ', 'T', $protocolo['dhRecbto']).$this->timeZone;
+                $nProt       = $protocolo['nProt'];
+                $cStat       = $protocolo['cStat'];
+                $tpEvento    = '110111';
+                $xMotivo     = $protocolo['xMotivo'];
                 $digVal      = $DigestValue;
-                 */
+                /*
                 if ($tpEvento != '110111') {
-                    $msg = 'O arquivo indicado para ser anexado não é um evento de cancelamento! '/*.$protfile*/;
+                    $msg = $tpEvento.' - '.$xMotivo;
                     $xmlProtocolado['retorno'] = $msg;
                     return $xmlProtocolado;
                 }
+                 */
             }
             /*
             if (!isset($protNFe) && !isset($retCancNFe) && !isset($retEvento)) {
@@ -1299,7 +1304,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
             $xml = $xmldoc->saveXML();
             //libera a chave privada da memoria
             openssl_free_key($pkeyid);
-            if($operacao == 'inutilizar') {
+            if($operacao == 'inutilizar' || $operacao == 'cancelar') {
                 return $xml;
             }
             // Salva o XML
@@ -1813,6 +1818,267 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
     } //fim inutNFe
     
     /**
+     * cancelEvent
+     * Solicita o cancelamento de NFe autorizada
+     * - O xml do evento de cancelamento será salvo na pasta Canceladas
+     *
+     * @name cancelEvent
+     * @param string $chNFe
+     * @param string $nProt
+     * @param string $xJust
+     * @param number $tpAmb
+     * @param array  $aRetorno
+     */
+    public function cancelEvent($chNFe = '', $nProt = '', $xJust = '', $tpAmb = '', &$aRetorno = array(), $siglaUf, $ufEmitente, $cnpjEmitente)
+    {
+        $xmlCancelado = array();
+        try {
+            //retorno da função
+            $aRetorno = array(
+                'bStat'=>false,
+                'tpAmb'=>'',
+                'verAplic'=>'',
+                'cStat'=>'',
+                'xMotivo'=>'',
+                'nProt'=>'',
+                'chNFe'=>'',
+                'dhRecbto'=>'');
+            //validação dos dados de entrada
+            if ($chNFe == '' || $nProt == '' || $xJust == '') {
+                $msg = "Não foi passado algum dos parâmetros necessários "
+                        . "ID=$chNFe ou protocolo=$nProt ou justificativa=$xJust.";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            if ($tpAmb == '') {
+                //$tpAmb = $this->tpAmb;
+            }
+            if (strlen($xJust) < 15) {
+                $msg = "A justificativa deve ter pelo menos 15 digitos!!";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            if (strlen($xJust) > 255) {
+                $msg = "A justificativa deve ter no máximo 255 digitos!!";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            if (strlen($chNFe) != 44) {
+                $msg = "Uma chave de NFe válida não foi passada como parâmetro $chNFe.";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            //estabelece o codigo do tipo de evento CANCELAMENTO
+            $tpEvento = '110111';
+            $descEvento = 'Cancelamento';
+            //para cancelamento o numero sequencia do evento sempre será 1
+            $nSeqEvento = '1';
+            //remove qualquer caracter especial
+            $xJust = $this->pCleanString($xJust);
+            //verifica se alguma das contingências está habilitada
+            /*
+            if ($this->enableSVCAN) {
+                $aURL = $this->pLoadSEFAZ($tpAmb, self::CONTINGENCIA_SVCAN);
+            } elseif ($this->enableSVCRS) {
+                $aURL = $this->pLoadSEFAZ($tpAmb, self::CONTINGENCIA_SVCRS);
+            } else {
+                $aURL = $this->aURL;
+            }
+             */
+            if (!$aURL = $this->pLoadSEFAZ($tpAmb, $siglaUf)) {
+                $msg = "Erro no carregamento das informacoes da SEFAZ";
+                $protocolo['retorno'] = $msg;
+                return $protocolo;
+            }
+            $numLote = $this->pGeraNumLote();
+            //Data e hora do evento no formato AAAA-MM-DDTHH:MM:SSTZD (UTC)
+            $validarCampos = Mage::helper('nfe/ValidarCampos');
+            $dataAtual = $validarCampos->getHoraCerta(date('Y-m-d H:i:s'));
+            $dhEvento = str_replace(' ', 'T', $dataAtual).$this->timeZone;
+            //se o envio for para svan mudar o numero no orgão para 91
+            if ($this->enableSVAN) {
+                $cOrgao='90';
+            } else {
+                $cOrgao=$ufEmitente;
+            }
+            //montagem do namespace do serviço
+            $servico = 'RecepcaoEvento';
+            //recuperação da versão
+            $versao = '1.00';
+            //recuperação da url do serviço
+            $urlservico = $aURL[$servico]['URL'];
+            //recuperação do método
+            $metodo = $aURL[$servico]['method'];
+            //montagem do namespace do serviço
+            $namespace = $this->URLPortal.'/wsdl/'.$servico;
+            //de acordo com o manual versão 5 de março de 2012
+            // 2   +    6     +    44         +   2  = 54 digitos
+            //“ID” + tpEvento + chave da NF-e + nSeqEvento
+            //garantir que existam 2 digitos em nSeqEvento para montar o ID com 54 digitos
+            if (strlen(trim($nSeqEvento))==1) {
+                $zenSeqEvento = str_pad($nSeqEvento, 2, "0", STR_PAD_LEFT);
+            } else {
+                $zenSeqEvento = trim($nSeqEvento);
+            }
+            $eventId = "ID".$tpEvento.$chNFe.$zenSeqEvento;
+            //monta mensagem
+            $Ev = '';
+            $Ev .= "<evento xmlns=\"$this->URLPortal\" versao=\"$versao\">";
+            $Ev .= "<infEvento Id=\"$eventId\">";
+            $Ev .= "<cOrgao>$cOrgao</cOrgao>";
+            $Ev .= "<tpAmb>$tpAmb</tpAmb>";
+            $Ev .= "<CNPJ>$cnpjEmitente</CNPJ>";
+            $Ev .= "<chNFe>$chNFe</chNFe>";
+            $Ev .= "<dhEvento>$dhEvento</dhEvento>";
+            $Ev .= "<tpEvento>$tpEvento</tpEvento>";
+            $Ev .= "<nSeqEvento>$nSeqEvento</nSeqEvento>";
+            $Ev .= "<verEvento>$versao</verEvento>";
+            $Ev .= "<detEvento versao=\"$versao\">";
+            $Ev .= "<descEvento>$descEvento</descEvento>";
+            $Ev .= "<nProt>$nProt</nProt>";
+            $Ev .= "<xJust>$xJust</xJust>";
+            $Ev .= "</detEvento></infEvento></evento>";
+            //assinatura dos dados
+            $tagid = 'infEvento';
+            $Ev = $this->assinarXML($Ev, $tagid, '', 'cancelar');
+            $Ev = $this->pClearXml($Ev, true);
+            //carrega uma matriz temporária com os eventos assinados
+            //montagem dos dados
+            $dados = '';
+            $dados .= "<envEvento xmlns=\"$this->URLPortal\" versao=\"$versao\">";
+            $dados .= "<idLote>$numLote</idLote>";
+            $dados .= $Ev;
+            $dados .= "</envEvento>";
+            //montagem da mensagem
+            $cabec = "<nfeCabecMsg xmlns=\"$namespace\"><cUF>$ufEmitente</cUF>"
+                    . "<versaoDados>$versao</versaoDados></nfeCabecMsg>";
+            $dados = "<nfeDadosMsg xmlns=\"$namespace\">$dados</nfeDadosMsg>";
+            //grava solicitação em temp
+            /*
+            $arqName = $this->temDir."$chNFe-$nSeqEvento-eventCanc.xml";
+            if (!file_put_contents($arqName, $Ev)) {
+                $msg = "Falha na gravacao do arquivo $arqName";
+                $this->pSetError($msg);
+            }
+             */
+            //envia dados via SOAP
+            $retorno = $this->pSendSOAP($urlservico, $namespace, $cabec, $dados, $metodo, $tpAmb);
+            //verifica o retorno
+            if (!$retorno) {
+                //não houve retorno
+                $msg = "Nao houve retorno Soap verifique a mensagem de erro e o debug!!";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            //tratar dados de retorno
+            $xmlretEvent = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+            $xmlretEvent->formatOutput = false;
+            $xmlretEvent->preserveWhiteSpace = false;
+            $xmlretEvent->loadXML($retorno['valor'], LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            $retEnvEvento = $xmlretEvent->getElementsByTagName("retEnvEvento")->item(0);
+            $cStat = !empty($retEnvEvento->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+            $xMotivo = !empty($retEnvEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+            if ($cStat == '') {
+                //houve erro
+                $msg = "cStat está em branco, houve erro na comunicação Soap "
+                        . "verifique a mensagem de erro e o debug!!";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            //tratar erro de versão do XML
+            if ($cStat == '238' || $cStat == '239') {
+                /*
+                $this->pTrata239($retorno, $this->siglaUF, $tpAmb, $servico, $versao);
+                 */
+                $msg = "Versão do arquivo XML não suportada no webservice!!";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            //erro no processamento cStat <> 128
+            if ($cStat != 128) {
+                //se cStat <> 135 houve erro e o lote foi rejeitado
+                $msg = "Retorno de ERRO: $cStat - $xMotivo";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            //o lote foi processado cStat == 128
+            $retEvento = $xmlretEvent->getElementsByTagName("retEvento")->item(0);
+            $cStat = !empty($retEvento->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+            $xMotivo = !empty($retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+            if ($cStat != 135 && $cStat != 155) {
+                //se cStat <> 135 houve erro e o lote foi rejeitado
+                $msg = "Retorno de ERRO: $cStat - $xMotivo";
+                $xmlCancelado['retorno'] = $msg;
+                return $xmlCancelado;
+            }
+            $aRetorno['bStat'] = true;
+            // tipo de ambiente
+            $aRetorno['tpAmb'] = $retEvento->getElementsByTagName('tpAmb')->item(0)->nodeValue;
+            // verssão do aplicativo
+            $aRetorno['verAplic'] = $retEvento->getElementsByTagName('verAplic')->item(0)->nodeValue;
+            // status do serviço
+            $aRetorno['cStat'] = $retEvento->getElementsByTagName('cStat')->item(0)->nodeValue;
+            // motivo da resposta (opcional)
+            $aRetorno['xMotivo'] = $retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue;
+            // Numero de Protocolo
+            $aRetorno['nProt'] = $retEvento->getElementsByTagName('nProt')->item(0)->nodeValue;
+            // Chave
+            $aRetorno['chNFe'] = $retEvento->getElementsByTagName('chNFe')->item(0)->nodeValue;
+            // data e hora da mensagem (opcional)
+            $aRetorno['dhRecbto'] = !empty($retEvento->getElementsByTagName('dhRegEvento')->item(0)->nodeValue) ?
+                                    date("Y-m-d H:i:s", $this->pConvertTime($retEvento->getElementsByTagName('dhRegEvento')->item(0)->nodeValue)) : '';
+            //o evento foi aceito cStat == 135 ou cStat == 155
+            //carregar o evento
+            $xmlenvEvento = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+            $xmlenvEvento->formatOutput = false;
+            $xmlenvEvento->preserveWhiteSpace = false;
+            $xmlenvEvento->loadXML($Ev, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            $evento = $xmlenvEvento->getElementsByTagName("evento")->item(0);
+            //Processo completo solicitação + protocolo
+            $xmlprocEvento = new DOMDocument('1.0', 'utf-8');
+            $xmlprocEvento->formatOutput = false;
+            $xmlprocEvento->preserveWhiteSpace = false;
+            //cria a tag procEventoNFe
+            $procEventoNFe = $xmlprocEvento->createElement('procEventoNFe');
+            $xmlprocEvento->appendChild($procEventoNFe);
+            //estabele o atributo de versão
+            $eventProc_att1 = $procEventoNFe->appendChild($xmlprocEvento->createAttribute('versao'));
+            $eventProc_att1->appendChild($xmlprocEvento->createTextNode($versao));
+            //estabelece o atributo xmlns
+            $eventProc_att2 = $procEventoNFe->appendChild($xmlprocEvento->createAttribute('xmlns'));
+            $eventProc_att2->appendChild($xmlprocEvento->createTextNode($this->URLPortal));
+            //carrega o node evento
+            $node1 = $xmlprocEvento->importNode($evento, true);
+            $procEventoNFe->appendChild($node1);
+            //carrega o node retEvento
+            $node2 = $xmlprocEvento->importNode($retEvento, true);
+            $procEventoNFe->appendChild($node2);
+            //salva o xml como string em uma variável
+            $procXML = $xmlprocEvento->saveXML();
+            //remove as informações indesejadas
+            $procXML = $this->pClearXml($procXML, false);
+            //salva o arquivo xml
+            /*
+            $arqName = $this->canDir."$chNFe-$nSeqEvento-procCanc.xml";
+            if (!file_put_contents($arqName, $procXML)) {
+                $msg = "Falha na gravacao do arquivo $arqName";
+                $this->pSetError($msg);
+            }
+             */
+        } catch (Exception $e) {
+            Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            return false;
+        }
+        $xmlCancelado['retorno'] = 'sucesso';
+        $xmlCancelado['infProt'] = $aRetorno;
+        return $xmlCancelado;
+    } //fim cancEvent
+    
+    /**
      * loadSEFAZ
      * Extrai o URL, nome do serviço e versão dos webservices das SEFAZ de
      * todos os Estados da Federação, a partir do arquivo XML de configurações,
@@ -2213,6 +2479,19 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfe->save();
     }
     
+    public function setCancelado($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
+        $order->setData('status', 'nfe_cancelada');
+        $order->addStatusToHistory(nfe_cancelada, 
+        'O processo de cancelamento da Nota Fiscal Eletrõnica (NF-e) foi completado.<br/>
+         Status: Cancelado');
+        $order->save();
+        $nfe->setStatus('6');
+        $nfe->setMensagem(utf8_encode('Cancelado pelo org�o respons�vel.'));
+        $nfe->save();
+    }
+    
     public function getDownloads($nfe, $inutilizado) {
         $downloadsDetalhes = array();
         if($inutilizado) {
@@ -2299,4 +2578,13 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $novoTexto = preg_replace("/[^a-zA-Z0-9 @,-.;:\/]/", "", $novoTexto);
         return $novoTexto;
     }//fim cleanString
+    
+    /**
+     * Gera numero de lote com base em microtime
+     * @return string 
+     */
+    private function pGeraNumLote()
+    {
+        return substr(str_replace(',', '', number_format(microtime(true)*1000000, 0)), 0, 15);
+    }
 }

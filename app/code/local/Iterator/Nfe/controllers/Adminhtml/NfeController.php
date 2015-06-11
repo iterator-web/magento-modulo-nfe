@@ -98,6 +98,12 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             $destinatarioModel->setTipoIdentificacao('dest');
         }
         
+        $validarCampos = Mage::helper('nfe/ValidarCampos');
+        $dhEmi = $validarCampos->getHoraCerta($model->getDhEmi());
+        $model->setDhEmi($dhEmi);
+        $dhSaiEnt = $validarCampos->getHoraCerta($model->getDhSaiEnt());
+        $model->setDhSaiEnt($dhSaiEnt);
+        
         $this->_title($model->getId() ? $model->getNNf() : $this->__('Nova NF-e'));
 
         $data = Mage::getSingleton('adminhtml/session')->getNfeData(true);
@@ -131,17 +137,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             $model->setData($postData['nfe']);
             try {
                 $dhEmiOrginal = str_replace('/', '-', $postData['nfe']['dh_emi']);
-                $dhEmi= substr($dhEmiOrginal,0,6).'20'.substr($dhEmiOrginal,6).':00';
-                if (!$validarCampos->validateDate(substr($dhEmi,0,8), 'YYYY-MM-DD')) {
-                    $erro = true;
-                    $msgErro = utf8_encode('A data de emissão da NF-e não é válida.');
-                }
+                $dhEmi = substr($dhEmiOrginal,0,6).'20'.substr($dhEmiOrginal,6).':00';
+                $dhEmi = $validarCampos->getHoraServidor($dhEmi);
                 $dhSaiEntOrginal = str_replace('/', '-', $postData['nfe']['dh_sai_ent']);
                 $dhSaiEnt = substr($dhSaiEntOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
-                if (!$validarCampos->validateDate(substr($dhSaiEnt,0,8), 'YYYY-MM-DD')) {
-                    $erro = true;
-                    $msgErro = utf8_encode('A data de entrada/saída da NF-e não é válida.');
-                }
+                $dhSaiEnt = $validarCampos->getHoraServidor($dhSaiEnt);
                 if(!$validarCampos->validaMinimoMaximo($postData['nfe']['nat_op'], 1, 60)) {
                     $erro = true;
                     $msgErro = utf8_encode('A natureza da operação da NF-e não é válida.');
@@ -1045,6 +1045,50 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         return;
     }
     
+    public function cancelAction() {
+        $nfeId = $this->getRequest()->getParam('nfe_id');
+        $nfe = Mage::getModel('nfe/nfe');
+        $nfe->load($nfeId);
+        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+        $aRetorno = array();
+        $cancelado = $nfeHelper->cancelEvent(substr($nfe->getIdTag(),3),$nfe->getNProt(),utf8_encode('Nota Fiscal cancelada por erro de operação'), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf(), preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj')));
+        if($cancelado['retorno'] == 'sucesso') {
+            $nfe->setVerAplic($cancelado['infProt']['verAplic']);
+            $nfe->setDhRecbto($cancelado['infProt']['dhRecbto']);
+            $nfe->setNProt($cancelado['infProt']['nProt']);
+            //$nfe->setDigVal($cancelado['infProt']['digVal']);
+            $nfe->setCStat($cancelado['infProt']['cStat']);
+            $nfe->setXMotivo($cancelado['infProt']['xMotivo']);
+            $xmlNfe = $nfeHelper->getXmlNfe($nfe);
+            $xmlProtocolado = $nfeHelper->addProt($xmlNfe, $cancelado['infProt'], $nfe->getVersao(), 'retEvento');
+            if($xmlProtocolado['retorno'] == 'sucesso') {
+                Mage::getSingleton('adminhtml/session')->addSuccess($this->__('A NF-e foi cancelada com sucesso.'));
+                if($nfe->getTpNf() == '0') {
+                    $tipo = 'entrada';
+                } else {
+                    $tipo = 'saida';
+                }
+                $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS;
+                $nfeHelper->salvarXml($xmlProtocolado['xml'], $caminho, $nfe->getIdTag());
+                $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe, 'F');
+                $nfeHelper->setCancelado($nfe);
+            } else {
+                Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era cancelada.'));
+                $nfe->setStatus('5');
+                $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($xmlProtocolado['retorno'])));
+                $nfe->save();
+            }
+        } else {
+            Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era cancelada.'));
+            $nfe->setStatus('5');
+            $nfe->setMensagem(utf8_encode('Aguardando correção para envio ao orgão responsável. Erro: '.utf8_decode($cancelado['retorno'])));
+            $nfe->save();
+        }
+        $this->_redirect('*/*/');
+        return;
+    }
+    
     public function imprimirAction() {
         $nfeHelper = Mage::Helper('nfe/nfeHelper');
         $nfeId = $this->getRequest()->getParam('nfe_id');
@@ -1055,23 +1099,38 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
     }
     
     protected function _isAllowed() {
-        return Mage::getSingleton('admin/session')->isAllowed('catalog/controleestoque');
+        return Mage::getSingleton('admin/session')->isAllowed('sales/nfe');
     }
     
     public function exportCsvAction() {
-        $fileName   = 'entrada.csv';
-        $content    = $this->getLayout()->createBlock('controleestoque/adminhtml_controleestoqueentrada_grid')
+        $fileName   = 'nfe.csv';
+        $content    = $this->getLayout()->createBlock('nfe/adminhtml_nfe_grid')
             ->getCsv();
  
         $this->_sendUploadResponse($fileName, $content);
     }
  
     public function exportXmlAction() {
-        $fileName   = 'entrada.xml';
-        $content    = $this->getLayout()->createBlock('controleestoque/adminhtml_controleestoqueentrada_grid')
+        $fileName   = 'nfe.xml';
+        $content    = $this->getLayout()->createBlock('nfe/adminhtml_nfe_grid')
             ->getXml();
  
         $this->_sendUploadResponse($fileName, $content);
+    }
+    
+    protected function _sendUploadResponse($fileName, $content, $contentType='application/octet-stream') {
+        $response = $this->getResponse();
+        $response->setHeader('HTTP/1.1 200 OK','');
+        $response->setHeader('Pragma', 'public', true);
+        $response->setHeader('Cache-Control', 'must-revalidate, post-check=0, pre-check=0', true);
+        $response->setHeader('Content-Disposition', 'attachment; filename='.$fileName);
+        $response->setHeader('Last-Modified', date('r'));
+        $response->setHeader('Accept-Ranges', 'bytes');
+        $response->setHeader('Content-Length', strlen($content));
+        $response->setHeader('Content-type', $contentType);
+        $response->setBody($content);
+        $response->sendResponse();
+        die;
     }
     
     public function consultarNfeAction() {
@@ -1108,7 +1167,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $html .= '<li style="margin:0; overflow:hidden;">
                     <div style="float:left; width:60px; margin-right:20px; margin-left:15px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVBc(), true, false).'</div>
                     <div style="float:left; width:118px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVIcms(), true, false).'</div>
-                    <div style="float:left; width:162px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getBcSt(), true, false).'</div>
+                    <div style="float:left; width:162px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVBcSt(), true, false).'</div>
                     <div style="float:left; width:163px; margin-right:20px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVSt(), true, false).'</div>
                     <div style="float:left; width:177px; text-align:right;">'.Mage::helper('core')->currency($nfe->getVProd(), true, false).'</div>
                   </li>';
@@ -1168,7 +1227,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
         $html .= '</ul>';
         $html .= '</div>';
-        if($nfe->getStatus() == '7') {
+        if($nfe->getStatus() == '6' || $nfe->getStatus() == '7') {
             $nfeHelper = Mage::Helper('nfe/nfeHelper');
             $downloadsDetalhes = $nfeHelper->getDownloads($nfe, false);
             $html .= '<div style="margin:20px 0 60px 0;">';
