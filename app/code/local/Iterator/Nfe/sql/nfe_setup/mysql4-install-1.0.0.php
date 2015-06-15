@@ -218,15 +218,9 @@ $installer->run(utf8_encode("
     `email` VARCHAR(60) NULL,
     PRIMARY KEY (`identificacao_id`),
     INDEX `fk_iterator_nfe_identificacao_nfe1_idx` (`nfe_id` ASC),
-    INDEX `fk_iterator_nfe_identific_directory_country_region1_idx` (`region_id` ASC),
     CONSTRAINT `fk_iterator_nfe_identificacao_nfe1`
       FOREIGN KEY (`nfe_id`)
       REFERENCES `{$installer->getTable('nfe/nfe')}` (`nfe_id`)
-      ON DELETE NO ACTION
-      ON UPDATE NO ACTION)
-    CONSTRAINT `fk_iterator_nfe_identific_directory_country_region1_idx`
-      FOREIGN KEY (`region_id`)
-      REFERENCES `{$installer->getTable('directory/country_region')}` (`region_id`)
       ON DELETE NO ACTION
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
@@ -455,7 +449,7 @@ $installer->run(utf8_encode("
       ON UPDATE NO ACTION)
   ENGINE = InnoDB CHARSET=utf8;
   
-  CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfetrasnporte')}` (
+  CREATE  TABLE IF NOT EXISTS `{$installer->getTable('nfe/nfetransporte')}` (
     `transporte_id` INT(12) UNSIGNED NOT NULL AUTO_INCREMENT,
     `nfe_id` INT(12) UNSIGNED NOT NULL,
     `tipo_informacao` VARCHAR(45) NULL COMMENT ' /* comment truncated */ /*reboque - vol - lacres*/',

@@ -56,7 +56,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $validarCampos = Mage::helper('nfe/ValidarCampos');
         
         $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
-        $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getRegionId());
+        $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getCode());
         if(!$cUF) {
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('O Estado do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
@@ -311,11 +311,18 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $nItem++;
                 $gtin = Mage::getModel('catalog/product')->load($item->getProductId())->getData('gtin');
                 $ncm = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('ncm');
+                $st = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('st');
                 $unidade = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('unidade');
                 $tipoMercadoria = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_mercadoria');
                 if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
                     if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                        $cfop = '5102';
+                        if($st == 'Recolhido pela Empresa') {
+                            $cfop = '5403';
+                        } else if($st == 'Recolhido pelo Fornecedor') {
+                            $cfop = '5405';
+                        } else {
+                            $cfop = '5102';
+                        }
                     } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
                         $cfop = '5101';
                     }
@@ -519,10 +526,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         return $retorno;
     }
     
-    public function gerarXML($nfeId) {
+    public function gerarXml($nfeId) {
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
-        $nfeHelper = Mage::Helper('nfe/nfeHelper');
-        $nfeCriarXML = Mage::helper('nfe/NfeCriarXml');
+        $nfeHelper = Mage::helper('nfe/nfeHelper');
+        $nfeCriarXML = Mage::helper('nfe/nfeCriarXML');
         $this->preencherCampos($nfe, $nfeCriarXML);
         $retornoXml = $this->gerarArquivoXML($nfe, $nfeCriarXML);
         if($retornoXml == 'sucesso') {
@@ -1332,7 +1339,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
     }
     
     private function gerarArquivoXML($nfe, $nfeCriarXML) {
-        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $nfeHelper = Mage::helper('nfe/nfeHelper');
         $resposta = $nfeCriarXML->montaNFe();
         if ($resposta) {
             if($nfe->getTpNf() == '0') {

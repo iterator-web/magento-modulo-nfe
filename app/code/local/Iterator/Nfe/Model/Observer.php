@@ -46,14 +46,14 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
             } else if($nfe->getStatus() == '4') {
                 continue;
             } else if($nfe->getStatus() == '3') {
-                $nfeHelper = Mage::Helper('nfe/nfeHelper');
+                $nfeHelper = Mage::helper('nfe/nfeHelper');
                 $xmlNfe = $nfeHelper->getXmlNfe($nfe);
                 $sXml = $nfeHelper->xmlString($xmlNfe);
                 $nfeHelper->gerarDanfe($sXml, $nfe, 'F');
                 $nfeHelper->enviarEmail($nfe);
                 $nfeHelper->setCompleto($nfe);
             } else if($nfe->getStatus() == '2') {
-                $nfeHelper = Mage::Helper('nfe/nfeHelper');
+                $nfeHelper = Mage::helper('nfe/nfeHelper');
                 $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
                 $aRetorno = array();
                 if($nfe->getNRec() && strpos($nfe->getMensagem(),'Erro: 204') === false) {
@@ -104,9 +104,9 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                 }
             } else if($nfe->getStatus() == '1') {
                 $indSinc = 0;
-                $nfeHelper = Mage::Helper('nfe/nfeHelper');
+                $nfeHelper = Mage::helper('nfe/nfeHelper');
                 $xmlNfe = $nfeHelper->getXmlNfe($nfe);
-                $sXml = $this->xmlString($xmlNfe);
+                $sXml = $nfeHelper->xmlString($xmlNfe);
                 $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
                 $aRetorno = array();
                 $protocolo = $nfeHelper->autoriza($sXml, $nfe->getNfeId(), $aRetorno, $indSinc, $nfe->getTpAmb(), $estadoEmitente->getCode(), $nfe->getCUf());

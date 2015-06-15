@@ -1167,8 +1167,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
     public function assinarXml($docxml, $tagid = '', $nfe, $operacao) {
         $msg = 'sucesso';
         try {
-            $nfeHelper = Mage::Helper('nfe/nfeHelper');
-            $certificado = $nfeHelper->pLoadCerts();
+            $certificado = $this->pLoadCerts();
             if($certificado['retorno'] != 'sucesso') {
                 return $certificado['retorno'];
             }
@@ -1296,7 +1295,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
             $X509Data = $xmldoc->createElement('X509Data');
             $KeyInfo->appendChild($X509Data);
             //carrega o certificado sem as tags de inicio e fim
-            $cert = $nfeHelper->pCleanCerts($certificado['pubKey']);
+            $cert = $this->pCleanCerts($certificado['pubKey']);
             //X509Certificate
             $newNode = $xmldoc->createElement('X509Certificate', $cert);
             $X509Data->appendChild($newNode);
@@ -2420,7 +2419,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         }
         $logo = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
         $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . $tipo . DS . $nfe->getIdTag().'.pdf';
-        $nfeDanfe = Mage::Helper('nfe/pdf_nfeDanfe');
+        $nfeDanfe = Mage::helper('nfe/pdf_nfeDanfe');
         $nfeDanfe->init($xmlNfe, $formato, 'A4', $logo, 'I', '');
         $nfeDanfe->montaDANFE($formato, 'A4', 'C');
         $nfeDanfe->printDANFE($pdf, $acao);
@@ -2511,10 +2510,10 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         } else {
             $tipo = 'saida';
         }
-        $downloadsDetalhes['pdf_url'] = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/pdf/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
-        $downloadsDetalhes['xml_url'] = Mage::getBaseUrl(). 'nfe/operacoes/download/formato/xml/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
-        $downloadsDetalhes['pdf_img'] = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'pdf_logo.png';
-        $downloadsDetalhes['xml_img'] = Mage::getBaseUrl(). 'nfe/' . 'imagens/' . 'xml_logo.png';
+        $downloadsDetalhes['pdf_url'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB). 'nfe/operacoes/download/formato/pdf/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $downloadsDetalhes['xml_url'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB). 'nfe/operacoes/download/formato/xml/tipo/' . $tipo . '/key/' . rtrim(strtr(base64_encode(substr($nfe->getIdTag(),3)), '+/', '-_'), '=');
+        $downloadsDetalhes['pdf_img'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB). 'nfe/' . 'imagens/' . 'pdf_logo.png';
+        $downloadsDetalhes['xml_img'] = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB). 'nfe/' . 'imagens/' . 'xml_logo.png';
         
         return $downloadsDetalhes;
     }

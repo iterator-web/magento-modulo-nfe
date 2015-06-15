@@ -104,85 +104,85 @@ class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
     public function getUfEquivalente($ufMagento) {
         $ufIbge = null;
         switch ($ufMagento) {
-            case '485':
+            case 'AC':
                 $ufIbge = '12';
                 break;
-            case '486':
+            case 'AL':
                 $ufIbge = '27';
                 break;
-            case '487':
+            case 'AP':
                 $ufIbge = '16';
                 break;
-            case '488':
+            case 'AM':
                 $ufIbge = '13';
                 break;
-            case '489':
+            case 'BA':
                 $ufIbge = '29';
                 break;
-            case '490':
+            case 'CE':
                 $ufIbge = '23';
                 break;
-            case '491':
+            case 'DF':
                 $ufIbge = '53';
                 break;
-            case '492':
+            case 'ES':
                 $ufIbge = '32';
                 break;
-            case '493':
+            case 'GO':
                 $ufIbge = '52';
                 break;
-            case '494':
+            case 'MA':
                 $ufIbge = '21';
                 break;
-            case '495':
+            case 'MT':
                 $ufIbge = '51';
                 break;
-            case '496':
+            case 'MS':
                 $ufIbge = '50';
                 break;
-            case '497':
+            case 'MG':
                 $ufIbge = '31';
                 break;
-            case '498':
+            case 'PA':
                 $ufIbge = '15';
                 break;
-            case '499':
+            case 'PB':
                 $ufIbge = '25';
                 break;
-            case '500':
+            case 'PR':
                 $ufIbge = '41';
                 break;
-            case '501':
+            case 'PE':
                 $ufIbge = '26';
                 break;
-            case '502':
+            case 'PI':
                 $ufIbge = '22';
                 break;
-            case '503':
+            case 'RJ':
                 $ufIbge = '33';
                 break;
-            case '504':
+            case 'RN':
                 $ufIbge = '24';
                 break;
-            case '505':
+            case 'RS':
                 $ufIbge = '43';
                 break;
-            case '506':
+            case 'RO':
                 $ufIbge = '11';
                 break;
-            case '507':
+            case 'RR':
                 $ufIbge = '14';
                 break;
-            case '508':
+            case 'SC':
                 $ufIbge = '42';
                 break;
-            case '509':
+            case 'SP':
                 $ufIbge = '35';
                 break;
-            case '510':
+            case 'SE':
                 $ufIbge = '28';
                 break;
-            case '511':
+            case 'TO':
                 $ufIbge = '17';
                 break;
             default:

@@ -130,7 +130,6 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $postData = $this->getRequest()->getPost();
         $erro = false;
         $msgErro = null;
-        //var_dump($postData['itens']); exit();
         if ($postData) {
             $validarCampos = Mage::helper('nfe/ValidarCampos');
             $model = Mage::getSingleton('nfe/nfe');
@@ -147,7 +146,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $msgErro = utf8_encode('A natureza da operação da NF-e não é válida.');
                 }
                 $estadoEmitente = Mage::getModel('directory/region')->load($postData['emitente']['region_id']);
-                $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getRegionId());
+                $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getCode());
                 $cnpj = preg_replace('/[^\d]/', '', $postData['emitente']['cnpj']);
                 if(!$validarCampos->validarCnpj($cnpj)) {
                     $erro = true;
@@ -361,7 +360,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $nfeReferenciado->setAamm(preg_replace('/[^\d]/', '', $postData['referenciado']['aamm']));
                         $cnpj = preg_replace('/[^\d]/', '', $postData['referenciado']['cnpj']);
                         $estadoReferenciado = Mage::getModel('directory/region')->load($postData['referenciado']['region_id']);
-                        $referenciadoCUF = $validarCampos->getUfEquivalente($estadoReferenciado->getRegionId());
+                        $referenciadoCUF = $validarCampos->getUfEquivalente($estadoReferenciado->getCode());
                         $nfeReferenciado->setCnpj($cnpj);
                         $nfeReferenciado->setCUf($referenciadoCUF);
                         if(!$estadoReferenciado->getRegionId()) {
@@ -986,7 +985,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $countNonNfeOrder = 0;
         foreach ($orderIds as $orderId) {
             $order = Mage::getModel('sales/order')->load($orderId);
-            if ($order->getStatus() == 'processing' || $order->getStatus() == 'nfe_cancelada') {
+            if ($order->getStatus() == 'processing' || $order->getStatus() == 'nfe_cancelada' || $order->getStatus() == 'nfe_retirada' || $order->getStatus() == 'nfe_denegada') {
                 $nfeRN = Mage::getModel('nfe/nfeRN');
                 $retorno = $nfeRN->montarNfe($order);
                 if($retorno['status'] == 'sucesso') {
@@ -1068,7 +1067,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $nfeId = $this->getRequest()->getParam('nfe_id');
         $nfe = Mage::getModel('nfe/nfe');
         $nfe->load($nfeId);
-        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $nfeHelper = Mage::helper('nfe/nfeHelper');
         $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
         $aRetorno = array();
         $xmlInutilizado = $nfeHelper->inutNF(date('y'), strval(intval($nfe->getSerie())), strval(intval($nfe->getNNf())), strval(intval($nfe->getNNf())), utf8_encode('Número inutilizado por erro de operação'), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf(), $nfe->getMod(), preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj')));
@@ -1089,7 +1088,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $nfeId = $this->getRequest()->getParam('nfe_id');
         $nfe = Mage::getModel('nfe/nfe');
         $nfe->load($nfeId);
-        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $nfeHelper = Mage::helper('nfe/nfeHelper');
         $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
         $aRetorno = array();
         $cancelado = $nfeHelper->cancelEvent(substr($nfe->getIdTag(),3),$nfe->getNProt(),utf8_encode('Nota Fiscal cancelada por erro de operação'), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf(), preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj')));
@@ -1130,7 +1129,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
     }
     
     public function imprimirAction() {
-        $nfeHelper = Mage::Helper('nfe/nfeHelper');
+        $nfeHelper = Mage::helper('nfe/nfeHelper');
         $nfeId = $this->getRequest()->getParam('nfe_id');
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
         $xmlNfe = $nfeHelper->getXmlNfe($nfe);
@@ -1268,14 +1267,14 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $html .= '</ul>';
         $html .= '</div>';
         if($nfe->getStatus() == '6' || $nfe->getStatus() == '7') {
-            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $nfeHelper = Mage::helper('nfe/nfeHelper');
             $downloadsDetalhes = $nfeHelper->getDownloads($nfe, false);
             $html .= '<div style="margin:20px 0 60px 0;">';
             $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['pdf_url'].'\');"><span>Download da DANFE</span></button>');
             $html .= utf8_encode('<button style="float:right; margin-right:10px;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');
             $html .= '</div>';
         } else if($nfe->getStatus() == '9') {
-            $nfeHelper = Mage::Helper('nfe/nfeHelper');
+            $nfeHelper = Mage::helper('nfe/nfeHelper');
             $downloadsDetalhes = $nfeHelper->getDownloads($nfe, true);
             $html .= '<div style="margin:20px 0 60px 0;">';
             $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');

@@ -37,7 +37,7 @@ $nfe = Mage::getModel('nfe/nfe')->getCollection()
         ->addFieldToFilter('pedido_increment_id', array('eq' => $order->getIncrementId()))
         ->addFieldToFilter('status', array('eq' => '7'))
         ->getFirstItem();
-$nfeHelper = Mage::Helper('nfe/nfeHelper');
+$nfeHelper = Mage::helper('nfe/nfeHelper');
 $downloadsDetalhes = $nfeHelper->getDownloads($nfe, false);
 if($nfe->getIdTag()) :
 ?>
