@@ -311,6 +311,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $nItem++;
                 $gtin = Mage::getModel('catalog/product')->load($item->getProductId())->getData('gtin');
                 $ncm = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('ncm');
+                $origem = substr(Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('origem'),0,1);
                 $st = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('st');
                 $unidade = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('unidade');
                 $tipoMercadoria = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_mercadoria');
@@ -339,9 +340,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         $cfop = '6107';
                     }
                 }
-                if($existeMotorImpostos && $ncm && $cfop) {
+                if($existeMotorImpostos && $ncm && $origem && $cfop) {
                     $motorCalculos = Mage::getModel('motorimpostos/motorcalculos');
-                    $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm);
+                    $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem);
                     if($dadosNcm) {
                         $orig = $dadosNcm->getIcmsOrigem();
                         $cstCsosn = $dadosNcm->getIcmsCst();
