@@ -3454,10 +3454,13 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
             );
         }
         if ($obrigatorio || $content !== '') {
-            if($content != null) {
+            if($content != null && $content != 'gtin') {
                 $content = trim(preg_replace('/\s\s+/', " ", $content));
                 $content = $this->limpaString($content);
                 $temp = $this->dom->createElement($name, $content);
+                $parent->appendChild($temp);
+            } else if($content == 'gtin') {
+                $temp = $this->dom->createElement($name, '');
                 $parent->appendChild($temp);
             }
         }
