@@ -307,6 +307,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $prodSt = null;
                 $prodIpi = null;
                 $aliquotaIbpt = null;
+                $presente = false;
                 $nfeProduto = Mage::getModel('nfe/nfeproduto');
                 $nItem++;
                 $gtin = Mage::getModel('catalog/product')->load($item->getProductId())->getData('gtin');
@@ -315,32 +316,42 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $st = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('st');
                 $unidade = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('unidade');
                 $tipoMercadoria = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_mercadoria');
-                if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
-                    if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                        if($st == 'Recolhido pela Empresa') {
-                            $cfop = '5403';
-                        } else if($st == 'Recolhido pelo Fornecedor') {
-                            $cfop = '5405';
-                        } else {
-                            $cfop = '5102';
+                $tipoBrinde = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_brinde');
+                if($tipoBrinde == 'Amostra' || $tipoBrinde == 'Brinde') {
+                    $presente = true;
+                    if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
+                        $cfop = '5910';
+                    } else {
+                        $cfop = '6910';
+                    }
+                } else {
+                    if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
+                        if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                            if($st == 'Recolhido pela Empresa') {
+                                $cfop = '5403';
+                            } else if($st == 'Recolhido pelo Fornecedor') {
+                                $cfop = '5405';
+                            } else {
+                                $cfop = '5102';
+                            }
+                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                            $cfop = '5101';
                         }
-                    } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
-                        $cfop = '5101';
-                    }
-                } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) > 11) {
-                    if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                        $cfop = '6102';
-                    } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
-                        $cfop = '6101';
-                    }
-                } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) <= 11) {
-                    if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                        $cfop = '6108';
-                    } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
-                        $cfop = '6107';
+                    } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) > 11) {
+                        if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                            $cfop = '6102';
+                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                            $cfop = '6101';
+                        }
+                    } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) <= 11) {
+                        if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                            $cfop = '6108';
+                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                            $cfop = '6107';
+                        }
                     }
                 }
-                if($existeMotorImpostos && $ncm && $origem && $cfop) {
+                if($existeMotorImpostos && $ncm && $origem != null && $cfop) {
                     $motorCalculos = Mage::getModel('motorimpostos/motorcalculos');
                     $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem);
                     if($dadosNcm) {
@@ -371,12 +382,18 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $vUnComTrib = $itemParent->getPrice();
                     $vProd = $itemParent->getPrice() * $itemParent->getQtyOrdered();
                     $vDesc = $itemParent->getDiscountAmount();
+                    $qtdPedido = $itemParent->getQtyOrdered();
                 } else if(!$item->getParentItemId()) {
                     $xProd = $item->getName();
                     $qComTrib = $item->getQtyOrdered();
                     $vUnComTrib = $item->getPrice();
                     $vProd = $item->getPrice() * $item->getQtyOrdered();
                     $vDesc = $item->getDiscountAmount();
+                    $qtdPedido = $item->getQtyOrdered();
+                }
+                if($presente) {
+                    $vUnComTrib = '0.1';
+                    $vProd = '0.1' * $qtdPedido;
                 }
                 $existeRewards = Mage::getConfig()->getModuleConfig('Magestore_Affiliateplus')->is('active', 'true');
                 if($existeRewards) {
