@@ -44,6 +44,12 @@ class Iterator_Nfe_Block_Adminhtml_Order_View extends Mage_Adminhtml_Block_Sales
                     'onclick'   => 'setLocation(\'' . $this->getUrl('*/nfe/gerarNfe') . '\')',
                     'class'     => 'go'
             ));
+        } else if($status == 'closed') {
+            $this->_addButton('gerar_nfe_devolucao', array(
+                    'label'     => 'Gerar NF-e',
+                    'onclick'   => 'setLocation(\'' . $this->getUrl('*/nfe/gerarNfeDevolucao') . '\')',
+                    'class'     => 'go'
+            ));
         } else {
             return;
         }

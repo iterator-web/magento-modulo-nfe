@@ -2501,6 +2501,20 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->save();
     }
     
+    public function setDevolvido($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->setData('state', Mage_Sales_Model_Order::STATE_CLOSED);
+        $order->setData('status', 'closed');
+        $order->addStatusToHistory(closed, 
+        'O processo de emissão da Nota Fiscal Eletrõnica (NF-e) de devolução foi completado.<br/>
+         A Chave de Acesso da NF-e é: '.substr($nfe->getIdTag(),3).'<br/>
+         Status: Completo');
+        $order->save();
+        $nfe->setStatus('7');
+        $nfe->setMensagem(utf8_encode('Processo de emiss�o da NF-e completo.'));
+        $nfe->save();
+    }
+    
     public function getDownloads($nfe, $inutilizado) {
         $downloadsDetalhes = array();
         if($inutilizado) {

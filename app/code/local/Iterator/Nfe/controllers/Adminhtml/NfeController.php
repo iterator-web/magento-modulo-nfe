@@ -559,6 +559,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
                                 ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']))
                                 ->getFirstItem();
+                        /*
                         if($itensArray['option_'.$i]['c_ean'] == '' || $itensArray['option_'.$i]['c_ean'] == '0') {
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN e portanto está NF-e não é válida.');
@@ -567,6 +568,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem GTIN Tributação e portanto está NF-e não é válida.');
                         }
+                         */
                         if($itensArray['option_'.$i]['ncm'] == '' || $itensArray['option_'.$i]['ncm'] == '0') {
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem NCM e portanto está NF-e não é válida.');
@@ -1009,6 +1011,30 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             $this->_getSession()->addSuccess($this->__('%s solicita&ccedil;&otilde;es de pedido(s) para emiss&atilde;o de NF-e gerada(s) com sucesso.', $countNfeOrder));
         }
         $this->_redirect('*/sales_order/');
+    }
+    
+    public function gerarNfeDevolucaoAction() {
+        $orderId = $this->getRequest()->getParam('order_id');
+        if ($orderId) {
+            try {
+                $order = Mage::getModel('sales/order')->load($orderId);
+                $nfeRN = Mage::getModel('nfe/nfeRN');
+                $retorno = $nfeRN->montarNfeRetorno($order);
+                if($retorno['status'] == 'sucesso') {
+                    $this->_getSession()->addSuccess($this->__($retorno['msg']));
+                } else if($retorno['status'] == 'erro') {
+                    $this->_getSession()->addError($this->__($retorno['msg']));
+                }
+            }
+            catch (Mage_Core_Exception $e) {
+                $this->_getSession()->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                $this->_getSession()->addError($this->__('Pedido com NF-e n&atilde;o gerada.'));
+                Mage::logException($e);
+            }
+            $this->_redirect('*/sales_order/view', array('order_id' => $orderId));
+        }
     }
     
     public function editRangeAction() {

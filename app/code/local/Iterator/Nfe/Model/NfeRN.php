@@ -52,6 +52,18 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $totalVTotTrib = null;
         $totalAliquotaIbpt = null;
         $retorno = array();
+        
+        $verificaExiste = Mage::getModel('nfe/nfe')->getCollection()
+                    ->addFieldToFilter('pedido_increment_id', array('eq' => $order->getIncrementId()))
+                    ->addFieldToFilter('status', array('in' => array('0','1','2','3','4', 7)))
+                    ->addFieldToFilter('tp_nf', array('eq' => '1'))
+                    ->getFirstItem();
+        if($verificaExiste->getNfeId()) {
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('Uma NF-e de entrada já foi emitida para o pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        
         $nfe = Mage::getModel('nfe/nfe');
         $validarCampos = Mage::helper('nfe/ValidarCampos');
         
@@ -234,7 +246,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $nfeIdentificacaoDestinatario->setTipoPessoa(2);
             $nfeIdentificacaoDestinatario->setCnpj($cpfCnpj);
             $nfeIdentificacaoDestinatario->setXNome($cliente->getRazaosocial());
-            if($cliente->getIe()) {
+            if($cliente->getIe() && strtolower($cliente->getIe()) != 'isento') {
                 $nfeIdentificacaoDestinatario->setIndIeDest('1');
                 $nfeIdentificacaoDestinatario->setIe($cliente->getIe());
             } else {
@@ -532,7 +544,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 }
             }
         }
-        $infCpl .= utf8_encode('Val Aprox dos Tributos '.Mage::helper('core')->currency($totalVTotTrib, true, false).' ('.number_format($totalAliquotaIbpt / $itemComNcm, 2, '.', '').'%) Fonte: IBPT');
+        $infCpl .= utf8_encode('Val Aprox dos Tributos '.Mage::helper('core')->currency($totalVTotTrib, true, false).' Fonte: IBPT');
         $nfe->setInfInfCpl($infCpl);
         
         $nfe->save();
@@ -541,6 +553,194 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         
         $retorno['status'] = 'sucesso';
         $retorno['msg'] = utf8_encode('Solicitação para emissão da NF-e gerada com sucesso.');
+        return $retorno;
+    }
+    
+    public function montarNfeRetorno($order) {
+        $retorno = array();
+        $verificaExiste = Mage::getModel('nfe/nfe')->getCollection()
+                    ->addFieldToFilter('pedido_increment_id', array('eq' => $order->getIncrementId()))
+                    ->addFieldToFilter('status', array('in' => array('0','1','2','3','4', 7)))
+                    ->addFieldToFilter('tp_nf', array('eq' => '0'))
+                    ->getFirstItem();
+        if($verificaExiste->getNfeId()) {
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('Uma NF-e de devolução já foi emitida para o pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        
+        $nfeSaida = Mage::getModel('nfe/nfe')->getCollection()
+                    ->addFieldToFilter('pedido_increment_id', array('eq' => $order->getIncrementId()))
+                    ->addFieldToFilter('status', array('eq' => '7'))
+                    ->addFieldToFilter('tp_nf', array('eq' => '1'))
+                    ->getFirstItem();
+        
+        $estadoDestinatario = Mage::getModel('directory/region')->load($order->getShippingAddress()->getRegionId());
+        $nfeSaidaId = $nfeSaida->getNfeId();
+        $chaveReferenciada = substr($nfeSaida->getIdTag(),3);
+        
+        if(!$nfeSaida->getNfeId()) {
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('Nenhuma NF-e de saída foi emitida com sucesso para o pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        
+        $nfeEntrada = $nfeSaida;
+        $validarCampos = Mage::helper('nfe/ValidarCampos');
+        $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+        $cUF = $validarCampos->getUfEquivalente($estadoEmitente->getCode());
+        if(!$cUF) {
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('O Estado do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        $aamm = date('ym');
+        $cnpj = preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj'));
+        if(!$validarCampos->validarCnpj($cnpj)) {
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('O CNPJ do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        $mod = '55';
+        $nfeRange = Mage::getModel('nfe/nferange')->load('1');
+        $serie = $nfeRange->getSerie();
+        $nNF = $nfeRange->getNumero();
+        $this->setRange($nfeRange);
+        $tpEmis = Mage::getStoreConfig('nfe/nfe_opcoes/emissao');
+        $cNF = $this->gerarCodigoNumerico();
+        $chave = $cUF . $aamm . $cnpj . $mod . $serie . $nNF . $tpEmis . $cNF;
+        $cDV = $this->calcularDV($chave);
+        $chave .= $cDV;
+        $indPag = $this->getFormaPagamento($order);
+        if($indPag == null) {
+            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->save();
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('A forma de pagamento não é válida. Pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        $dataHoraAtual = date("Y-m-d H:i:s");
+        $dataHoraSaida = date("Y-m-d H:i:s", strtotime('+5 hours'));
+        $estadoDestino = Mage::getModel('directory/region')->load($order->getShippingAddress()->getRegionId());
+        if($estadoEmitente->getRegionId() == $estadoDestino->getRegionId()) {
+            $idDest = '1';
+        } else  {
+            $idDest = '2';
+        }
+        $cMunFG = Mage::getStoreConfig('nfe/emitente_opcoes/codigo_municipio');
+        if(!$cMunFG) {
+            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->save();
+            $retorno['status'] = 'erro';
+            $retorno['msg'] = utf8_encode('O Código do Município do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
+            return $retorno;
+        }
+        $formatoDanfe = Mage::getStoreConfig('nfe/danfe_opcoes/formato');
+        if($formatoDanfe == 'portraite') {
+            $tpImp = '1';
+        } else if($formatoDanfe == 'landscape') {
+            $tpImp = '2';
+        }
+        $ambiente = Mage::getStoreConfig('nfe/nfe_opcoes/ambiente');
+        if($ambiente == 'producao') {
+            $tpAmb = '1';
+        } else if($ambiente == 'homologacao') {
+            $tpAmb = '2';
+        }
+        
+        $nfeEntrada->setNfeId(null);
+        $nfeEntrada->setPedidoIncrementId($order->getIncrementId());
+        $nfeEntrada->setNRec(null);
+        $nfeEntrada->setVerAplic(null);
+        $nfeEntrada->setDhRecbto(null);
+        $nfeEntrada->setNProt(null);
+        $nfeEntrada->setCStat(null);
+        $nfeEntrada->setXMotivo(null);
+        $nfeEntrada->setStatus('0');
+        $nfeEntrada->setMensagem(utf8_encode('Aguardando aprovação para enviar solicitação de autorização ao orgão responsável.'));
+        $nfeEntrada->setVersao('3.10');
+        $nfeEntrada->setIdTag('NFe'.$chave);
+        $nfeEntrada->setCUf($cUF);
+        $nfeEntrada->setCNf($cNF);
+        $nfeEntrada->setNatOp('Venda de Mercadoria');
+        $nfeEntrada->setIndPag($indPag);
+        $nfeEntrada->setMod($mod);
+        $nfeEntrada->setSerie($serie);
+        $nfeEntrada->setNNf($nNF);
+        $nfeEntrada->setDhEmi(str_replace(' ', 'T', $dataHoraAtual));
+        $nfeEntrada->setDhSaiEnt(str_replace(' ', 'T', $dataHoraSaida));
+        $nfeEntrada->setTpNf('0');
+        $nfeEntrada->setIdDest($idDest);
+        $nfeEntrada->setCMunFg($cMunFG);
+        $nfeEntrada->setTpImp($tpImp);
+        $nfeEntrada->setTpEmis($tpEmis);
+        $nfeEntrada->setCDv($cDV);
+        $nfeEntrada->setTpAmb($tpAmb);
+        $nfeEntrada->setFinNfe('4');
+        $nfeEntrada->setIndFinal('1');
+        $nfeEntrada->setIndPres('2');
+        $nfeEntrada->setProcEmi('0');
+        $nfeEntrada->setVerProc('1.0.0');
+        $nfeEntrada->setTemReferencia(1);
+        $nfeEntrada->save();
+        
+        $nfeEntradaId = $nfeEntrada->getNfeId();
+        
+        $nfeIdentificacoes = Mage::getModel('nfe/nfeidentificacao')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId));
+        foreach($nfeIdentificacoes as $nfeIdentificacao) {
+            $nfeIdentificacao->setIdentificacaoId(null);
+            $nfeIdentificacao->setNfeId($nfeEntradaId);
+            $nfeIdentificacao->save();
+        }
+        
+        $nfeReferenciado = Mage::getModel('nfe/nfereferenciado');
+        $nfeReferenciado->setNfeId($nfeEntradaId);
+        $nfeReferenciado->setTipoDocumento('refNFe');
+        $nfeReferenciado->setRefNfe($chaveReferenciada);
+        $nfeReferenciado->save();
+        
+        $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId));
+        foreach($nfeProdutos as $nfeProduto) {
+            $nfeProdutoSaidaId = $nfeProduto->getProdutoId();
+            $nfeProduto->setProdutoId(null);
+            $nfeProduto->setNfeId($nfeEntradaId);
+            if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
+                $cfop = '1202';
+            } else {
+                $cfop = '2202';
+            }
+            $nfeProduto->setCfop($cfop);
+            $nfeProduto->save();
+            $nfeProdutoEntradaId = $nfeProduto->getProdutoId();
+            
+            if($nfeProduto->getEhEspecifico() == '1') {
+                $nfeProdutosEspecificos = Mage::getModel('nfe/nfeprodutoespecifico')->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
+                foreach($nfeProdutosEspecificos as $nfeProdutoEspecifico) {
+                    $nfeProdutoEspecifico->setEspecificoId(null);
+                    $nfeProdutoEspecifico->setProdutoId($nfeProdutoEntradaId);
+                    $nfeProdutoEspecifico->save();
+                }
+            }
+            
+            $nfeProdutoImpostos = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
+            foreach($nfeProdutoImpostos as $nfeProdutoImposto) {
+                $nfeProdutoImposto->setImpostoId(null);
+                $nfeProdutoImposto->setProdutoId($nfeProdutoEntradaId);
+                $nfeProdutoImposto->save();
+            }
+            
+            $nfeProdutoImportExports = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
+            foreach($nfeProdutoImportExports as $nfeProdutoImportExport) {
+                $nfeProdutoImportExport->setImportExportId(null);
+                $nfeProdutoImportExport->setProdutoId($nfeProdutoEntradaId);
+                $nfeProdutoImportExport->save();
+            }
+        }
+        
+        $this->setStatusPedidoDevolvido($order);
+        
+        $retorno['status'] = 'sucesso';
+        $retorno['msg'] = utf8_encode('Solicitação para emissão da NF-e de devolução gerada com sucesso.');
         return $retorno;
     }
     
@@ -789,6 +989,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $nItem = $nfeProduto->getNItem();
             $cProd = $nfeProduto->getCProd();
             $cEAN = $nfeProduto->getCEan();
+            if($cEAN == null) {
+                $cEAN = 'gtin';
+            }
             $xProd = $nfeProduto->getXProd();
             $NCM = $nfeProduto->getNcm();
             $NVE = $nfeProduto->getNve();
@@ -801,6 +1004,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $vUnCom = $nfeProduto->getVUnCom();
             $vProd = $nfeProduto->getVProd();
             $cEANTrib = $nfeProduto->getCEanTrib();
+            if($cEANTrib == null) {
+                $cEANTrib = 'gtin';
+            }
             $uTrib = $nfeProduto->getUTrib();
             $qTrib = $nfeProduto->getQTrib();
             $vUnTrib = $nfeProduto->getVUnTrib();
@@ -959,7 +1165,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $pDif = $nfeProdutoImpostoIcms->getPDif();
                     $vICMSDif = $nfeProdutoImpostoIcms->getVIcmsDif();
                     $vICMSOp = $nfeProdutoImpostoIcms->getVIcmsOp();
-                    $vBCSTRet = $nfeProdutoImpostoIcms->getVbcstRet();
+                    $vBCSTRet = $nfeProdutoImpostoIcms->getVBcstRet();
                     $vICMSSTRet = $nfeProdutoImpostoIcms->getVIcmsStRet();
                     $resposta = $nfeCriarXML->tagICMS($nItem, $orig, $cst, $modBC, $pRedBC, $vBC, $pICMS, $vICMS, $vICMSDeson, $motDesICMS, $modBCST, $pMVAST, $pRedBCST, $vBCST, $pICMSST, $vICMSST, $pDif, $vICMSDif, $vICMSOp, $vBCSTRet, $vICMSSTRet);
                 } else if($nfeProdutoImpostoIcms->getCsoSn()) {
@@ -978,8 +1184,14 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $vBCST = $nfeProdutoImpostoIcms->getVBcSt();
                     $pICMSST = $nfeProdutoImpostoIcms->getPIcmsSt();
                     $vICMSST = $nfeProdutoImpostoIcms->getVIcmsSt();
-                    $vBCSTRet = $nfeProdutoImpostoIcms->getVbcstRet();
-                    $vICMSSTRet = $nfeProdutoImpostoIcms->getVIcmsStRet(); 
+                    $vBCSTRet = $nfeProdutoImpostoIcms->getVBcstRet();
+                    if($vBCSTRet == '0.00') {
+                        $vBCSTRet = null;
+                    }
+                    $vICMSSTRet = $nfeProdutoImpostoIcms->getVIcmsStRet();
+                    if($vICMSSTRet == '0.00') {
+                        $vICMSSTRet = null;
+                    }
                     $resposta = $nfeCriarXML->tagICMSSN($nItem, $orig, $csosn, $modBC, $vBC, $pRedBC, $pICMS, $vICMS, $pCredSN, $vCredICMSSN, $modBCST, $pMVAST, $pRedBCST, $vBCST, $pICMSST, $vICMSST, $vBCSTRet, $vICMSSTRet);
                 }
                 //ICMSPart
@@ -1004,6 +1216,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $vPIS = $nfeProdutoImpostoPis->getVPis();
                 $qBCProd = $nfeProdutoImpostoPis->getQBcProd();
                 $vAliqProd = $nfeProdutoImpostoPis->getVAliqProd();
+                if($vAliqProd == '0.0000') {
+                    $vAliqProd = null;
+                    $qBCProd = null;
+                }
                 $resposta = $nfeCriarXML->tagPIS($nItem, $cst, $vBC, $pPIS, $vPIS, $qBCProd, $vAliqProd);
             }
             //PISST
@@ -1025,6 +1241,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $vCOFINS = $nfeProdutoImpostoCofins->getVCofins();
                 $qBCProd = $nfeProdutoImpostoCofins->getQBcProd();
                 $vAliqProd = $nfeProdutoImpostoCofins->getVAliqProd();
+                if($vAliqProd == '0.0000') {
+                    $vAliqProd = null;
+                    $qBCProd = null;
+                }
                 $resposta = $nfeCriarXML->tagCOFINS($nItem, $cst, $vBC, $pCOFINS, $vCOFINS, $qBCProd, $vAliqProd);
             }
             //COFINSST
@@ -1399,6 +1619,16 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $order->setData('status', 'nfe_aguardando');
         $order->addStatusToHistory('nfe_aguardando', 
         utf8_encode('Foi solicitada a emissão da NF-e para este pedido.<br/>
+         Status: Aguardando Aprovação'));
+        
+        $order->save();
+    }
+    
+    private function setStatusPedidoDevolvido($order) {
+        $order->setData('state', Mage_Sales_Model_Order::STATE_CLOSED);
+        $order->setData('status', 'closed');
+        $order->addStatusToHistory('closed', 
+        utf8_encode('Foi solicitada a emissão da NF-e de devolução para este pedido.<br/>
          Status: Aguardando Aprovação'));
         
         $order->save();
