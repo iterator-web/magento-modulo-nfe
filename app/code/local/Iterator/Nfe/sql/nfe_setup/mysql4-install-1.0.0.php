@@ -407,7 +407,7 @@ $installer->run(utf8_encode("
     `q_bc_prod` DOUBLE(16,4) NULL,
     `v_aliq_prod` DOUBLE(15,4) NULL,
     `p_cofins` DOUBLE(7,4) NULL,
-    `v_cofins` DOUBLE(7,4) NULL,
+    `v_cofins` DOUBLE(15,2) NULL,
     `v_aliq` DOUBLE(7,4) NULL,
     `v_issqn` DOUBLE(15,2) NULL,
     `municipio_issqn` VARCHAR(60) NULL,
