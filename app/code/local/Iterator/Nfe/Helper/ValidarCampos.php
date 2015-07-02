@@ -192,9 +192,9 @@ class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
         return $ufIbge;
     }
     
-    public function getMunicipio($municipio) {
+    public function getMunicipio($municipio, $uf) {
         $nfeMunicipio = Mage::getModel('nfe/nfemunicipio')->getCollection()->addfieldToFilter('nome', array('like' => $municipio))->getFirstItem();
-        if(utf8_decode($municipio) != utf8_decode($nfeMunicipio['nome'])) {
+        if(utf8_decode($municipio) != utf8_decode($nfeMunicipio['nome']) || $uf != 'n' && $uf != $nfeMunicipio['ibge_uf']) {
             $nfeMunicipios = Mage::getModel('nfe/nfemunicipio')->getCollection()->addfieldToFilter('nome', array('like' => $municipio));
             foreach($nfeMunicipios as $nfeMunicipio) {
                 $nfeMunicipio = $nfeMunicipio;

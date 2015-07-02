@@ -152,7 +152,8 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $erro = true;
                     $msgErro = utf8_encode('O CNPJ do emitente da NF-e não é válido.');
                 }
-                $nfeMunicipio = $validarCampos->getMunicipio($postData['emitente']['x_mun']);
+                $ufEmitente = $validarCampos->getUfEquivalente($estadoEmitente->getCode());
+                $nfeMunicipio = $validarCampos->getMunicipio($postData['emitente']['x_mun'], $ufEmitente);
                 if(!$nfeMunicipio->getCodigo()) {
                     $erro = true;
                     $msgErro = utf8_encode('O Munícipio do emitente da NF-e não é válido.');
@@ -209,16 +210,15 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $model->setTransCpf(preg_replace('/[^\d]/', '', $postData['nfe']['trans_cpf']));
                     $model->setTransCnpj(null);
                 }
-                
-                
-                $nfeMunicipioTransporte = $validarCampos->getMunicipio($postData['nfe']['trans_x_mun']);
+                $estadoTransp = Mage::getModel('directory/region')->load($postData['nfe']['trans_region_id']);
+                $ufTransp = $validarCampos->getUfEquivalente($estadoTransp->getCode());
+                $nfeMunicipioTransporte = $validarCampos->getMunicipio($postData['nfe']['trans_x_mun'], $ufTransp);
                 if($postData['nfe']['trans_x_mun'] != '' && !$nfeMunicipioTransporte->getCodigo()) {
                     $erro = true;
                     $msgErro = utf8_encode('O Munícipio do transportador da NF-e não é válido.');
                 }
                 $model->setTrans_x_mun($nfeMunicipioTransporte->getNome());
                 $model->setTrans_c_munFg($nfeMunicipioTransporte->getIbgeUf().$nfeMunicipioTransporte->getCodigo());
-                $estadoTransp = Mage::getModel('directory/region')->load($postData['nfe']['trans_region_id']);
                 $model->setTransRegionId($estadoTransp->getRegionId());
                 $model->setTransUf($estadoTransp->getCode());
                 $estadoPlacaTransp = Mage::getModel('directory/region')->load($postData['nfe']['trans_veic_region_id']);
@@ -302,7 +302,8 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $erro = true;
                     $msgErro = utf8_encode('O e-mail do destinatário da NF-e não é válido.');
                 }
-                $nfeMunicipioDestinatario = $validarCampos->getMunicipio($postData['destinatario']['x_mun']);
+                $ufDestinatario = $validarCampos->getUfEquivalente($estadoDestinatario->getCode());
+                $nfeMunicipioDestinatario = $validarCampos->getMunicipio($postData['destinatario']['x_mun'], $ufDestinatario);
                 if(!$nfeMunicipioDestinatario->getCodigo()) {
                     $erro = true;
                     $msgErro = utf8_encode('O Munícipio do destinatário da NF-e não é válido.');
@@ -394,14 +395,15 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $nfeIdentificacaoRetirada->setCpf(preg_replace('/[^\d]/', '', $postData['retirada']['cpf']));
                         $nfeIdentificacaoDestinatario->setCnpj(null);
                     }
-                    $nfeMunicipioRetirada = $validarCampos->getMunicipio($postData['retirada']['x_mun']);
+                    $estadoRetirada = Mage::getModel('directory/region')->load($postData['retirada']['region_id']);
+                    $ufRetirada = $validarCampos->getUfEquivalente($estadoRetirada->getCode());
+                    $nfeMunicipioRetirada = $validarCampos->getMunicipio($postData['retirada']['x_mun'], $ufRetirada);
                     if(!$nfeMunicipioRetirada->getCodigo()) {
                         $erro = true;
                         $msgErro = utf8_encode('O Munícipio de retirada da NF-e não é válido.');
                     }
                     $nfeIdentificacaoRetirada->setCMun($nfeMunicipioRetirada->getIbgeUf().$nfeMunicipioRetirada->getCodigo());
                     $nfeIdentificacaoRetirada->setXMun($nfeMunicipioRetirada->getNome());
-                    $estadoRetirada = Mage::getModel('directory/region')->load($postData['retirada']['region_id']);
                     $nfeIdentificacaoRetirada->setRegionId($estadoRetirada->getRegionId());
                     $nfeIdentificacaoRetirada->setUf($estadoRetirada->getCode());
                     $nfeIdentificacaoRetirada->setCep(preg_replace('/[^\d]/', '', $postData['retirada']['cep']));
@@ -432,14 +434,15 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $nfeIdentificacaoEntrega->setCpf(preg_replace('/[^\d]/', '', $postData['entrega']['cpf']));
                         $nfeIdentificacaoDestinatario->setCnpj(null);
                     }
-                    $nfeMunicipioEntrega = $validarCampos->getMunicipio($postData['entrega']['x_mun']);
+                    $estadoEntrega = Mage::getModel('directory/region')->load($postData['entrega']['region_id']);
+                    $ufEntrega = $validarCampos->getUfEquivalente($estadoEntrega->getCode());
+                    $nfeMunicipioEntrega = $validarCampos->getMunicipio($postData['entrega']['x_mun'], $ufEntrega);
                     if(!$nfeMunicipioEntrega->getCodigo()) {
                         $erro = true;
                         $msgErro = utf8_encode('O Munícipio de entrega da NF-e não é válido.');
                     }
                     $nfeIdentificacaoEntrega->setCMun($nfeMunicipioEntrega->getIbgeUf().$nfeMunicipioEntrega->getCodigo());
                     $nfeIdentificacaoEntrega->setXMun($nfeMunicipioEntrega->getNome());
-                    $estadoEntrega = Mage::getModel('directory/region')->load($postData['entrega']['region_id']);
                     $nfeIdentificacaoEntrega->setRegionId($estadoEntrega->getRegionId());
                     $nfeIdentificacaoEntrega->setUf($estadoEntrega->getCode());
                     $nfeIdentificacaoEntrega->setCep(preg_replace('/[^\d]/', '', $postData['entrega']['cep']));
@@ -826,7 +829,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $nfeProdutoImposto->setVAliq($itensArray['option_'.$i]['v_aliq']);
                             $nfeProdutoImposto->setVIssqn($itensArray['option_'.$i]['v_issqn']);
                             if($itensArray['option_'.$i]['municipio_issqn'] != '') {
-                                $issqnMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_issqn']);
+                                $issqnMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_issqn'], 'n');
                                 if(!$issqnMunicipio->getCodigo()) {
                                     $erro = true;
                                     $msgErro = utf8_encode('O Munícipio de ocorrência da ISSQN da NF-e não é válido.');
@@ -844,7 +847,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $nfeProdutoImposto->setIndIss($itensArray['option_'.$i]['ind_iss']);
                             $nfeProdutoImposto->setCServico($itensArray['option_'.$i]['c_servico']);
                             if($itensArray['option_'.$i]['municipio_incidencia'] != '') {
-                                $incidenciaMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_incidencia']);
+                                $incidenciaMunicipio = $validarCampos->getMunicipio($itensArray['option_'.$i]['municipio_incidencia'], 'n');
                                 if(!$incidenciaMunicipio->getCodigo()) {
                                     $erro = true;
                                     $msgErro = utf8_encode('O Munícipio de incidência da ISSQN da NF-e não é válido.');
@@ -1339,7 +1342,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $municipio = $this->getRequest()->getParam('municipio');
         $validarCampos = Mage::helper('nfe/ValidarCampos');
         $result = array();
-        $nfeMunicipio = $validarCampos->getMunicipio($municipio);
+        $nfeMunicipio = $validarCampos->getMunicipio($municipio, 'n');
         if(!$nfeMunicipio->getCodigo()) {
             $result['resultado'] = 'false';
         } else {
