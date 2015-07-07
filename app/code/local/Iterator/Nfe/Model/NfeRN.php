@@ -351,13 +351,25 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         }
                     } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) > 11) {
                         if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                            $cfop = '6102';
+                            if($st == 'Recolhido pela Empresa') {
+                                $cfop = '6403';
+                            } else if($st == 'Recolhido pelo Fornecedor') {
+                                $cfop = '6405';
+                            } else {
+                                $cfop = '6102';
+                            }
                         } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
                             $cfop = '6101';
                         }
                     } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) <= 11) {
                         if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
-                            $cfop = '6108';
+                            if($st == 'Recolhido pela Empresa') {
+                                $cfop = '6403';
+                            } else if($st == 'Recolhido pelo Fornecedor') {
+                                $cfop = '6405';
+                            } else {
+                                $cfop = '6108';
+                            }
                         } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
                             $cfop = '6107';
                         }
