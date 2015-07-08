@@ -354,7 +354,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                             if($st == 'Recolhido pela Empresa') {
                                 $cfop = '6403';
                             } else if($st == 'Recolhido pelo Fornecedor') {
-                                $cfop = '6405';
+                                $cfop = '6404';
                             } else {
                                 $cfop = '6102';
                             }
@@ -366,7 +366,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                             if($st == 'Recolhido pela Empresa') {
                                 $cfop = '6403';
                             } else if($st == 'Recolhido pelo Fornecedor') {
-                                $cfop = '6405';
+                                $cfop = '6404';
                             } else {
                                 $cfop = '6108';
                             }
