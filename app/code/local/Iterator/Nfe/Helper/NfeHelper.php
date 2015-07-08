@@ -2456,8 +2456,10 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
         $order->setData('status', 'nfe_enviada');
         $order->addStatusToHistory(nfe_enviada, 
-        'O processo de emissão da Nota Fiscal Eletrõnica (NF-e) foi completado e o cliente foi notificado com sucesso.<br/>
-         A Chave de Acesso da NF-e é: '.substr($nfe->getIdTag(),3).'<br/>
+        'O processo de emissão da Nota Fiscal Eletrônica (NF-e) foi completado e o cliente foi notificado com sucesso.<br/>
+         Série: '.$nfe->getSerie().'<br/>   
+         Número: '.$nfe->getNNf().'<br/>   
+         Chave: '.substr($nfe->getIdTag(),3).'<br/>
          Status: Completo');
         $order->save();
         $nfe->setStatus('7');
