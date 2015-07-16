@@ -56,7 +56,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Form extends Mage_Adminhtml_Bloc
             'label'     => utf8_encode('Número do Pedido'),
             'title'     => utf8_encode('Número do Pedido'),
             'required'  => false,
-            'readonly'  => ($model->getId() ? true : false),
+            'disabled'  => ($model->getId() ? true : false),
             'style'     => ($model->getId() ? "background:none" : "background:#fff"),
             'class'     => 'validate-zero-or-greater',
         ));

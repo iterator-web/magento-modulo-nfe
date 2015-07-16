@@ -50,11 +50,13 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                 $xmlNfe = $nfeHelper->getXmlNfe($nfe);
                 $sXml = $nfeHelper->xmlString($xmlNfe);
                 $nfeHelper->gerarDanfe($sXml, $nfe, 'F');
-                if($nfe->getTpNf() == '0') {
-                    $nfeHelper->setDevolvido($nfe);
-                } else if($nfe->getTpNf() == '1') {
-                    $nfeHelper->enviarEmail($nfe);
-                    $nfeHelper->setCompleto($nfe);
+                if($nfe->getPedidoIncrementId()) {
+                    if($nfe->getTpNf() == '0') {
+                        $nfeHelper->setDevolvido($nfe);
+                    } else if($nfe->getTpNf() == '1') {
+                        $nfeHelper->enviarEmail($nfe);
+                        $nfeHelper->setCompleto($nfe);
+                    }
                 }
             } else if($nfe->getStatus() == '2') {
                 $nfeHelper = Mage::helper('nfe/nfeHelper');
@@ -80,11 +82,13 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                         $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                         $nfe->save();
                         $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe, 'F');
-                        if($nfe->getTpNf() == '0') {
-                            $nfeHelper->setDevolvido($nfe);
-                        } else if($nfe->getTpNf() == '1') {
-                            $nfeHelper->enviarEmail($nfe);
-                            $nfeHelper->setCompleto($nfe);
+                        if($nfe->getPedidoIncrementId()) {
+                            if($nfe->getTpNf() == '0') {
+                                $nfeHelper->setDevolvido($nfe);
+                            } else if($nfe->getTpNf() == '1') {
+                                $nfeHelper->enviarEmail($nfe);
+                                $nfeHelper->setCompleto($nfe);
+                            }
                         }
                     } else {
                         $nfe->setStatus('2');
@@ -133,11 +137,13 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                             $nfe->setMensagem(utf8_encode('Autorizado pelo orgão responsável.'));
                             $nfe->save();
                             $nfeHelper->gerarDanfe($xmlProtocolado['xml'], $nfe, 'F');
-                            if($nfe->getTpNf() == '0') {
-                                $nfeHelper->setDevolvido($nfe);
-                            } else if($nfe->getTpNf() == '1') {
-                                $nfeHelper->enviarEmail($nfe);
-                                $nfeHelper->setCompleto($nfe);
+                            if($nfe->getPedidoIncrementId()) {
+                                if($nfe->getTpNf() == '0') {
+                                    $nfeHelper->setDevolvido($nfe);
+                                } else if($nfe->getTpNf() == '1') {
+                                    $nfeHelper->enviarEmail($nfe);
+                                    $nfeHelper->setCompleto($nfe);
+                                }
                             }
                         } else {
                             $nfe->setStatus('4');

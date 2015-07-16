@@ -2472,7 +2472,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
         $order->setData('status', 'nfe_retirada');
         $order->addStatusToHistory(nfe_retirada, 
-        'O processo de retirada da Nota Fiscal Eletrõnica (NF-e) foi completado e o número inutilizado.<br/>
+        'O processo de retirada da Nota Fiscal Eletrônica (NF-e) foi completado e o número inutilizado.<br/>
          Status: Inutilizado');
         $order->save();
         $nfe->setStatus('9');
@@ -2485,7 +2485,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
         $order->setData('status', 'nfe_cancelada');
         $order->addStatusToHistory(nfe_cancelada, 
-        'O processo de cancelamento da Nota Fiscal Eletrõnica (NF-e) foi completado.<br/>
+        'O processo de cancelamento da Nota Fiscal Eletrônica (NF-e) foi completado.<br/>
          Status: Cancelado');
         $order->save();
         $nfe->setStatus('6');
@@ -2498,7 +2498,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->setData('state', Mage_Sales_Model_Order::STATE_PROCESSING);
         $order->setData('status', 'nfe_denegada');
         $order->addStatusToHistory(nfe_denegada, 
-        'O processo de emissão da Nota Fiscal Eletrõnica (NF-e) não foi completado, pois o pedido de emissão foi denegado.<br/>
+        'O processo de emissão da Nota Fiscal Eletrônica (NF-e) não foi completado, pois o pedido de emissão foi denegado.<br/>
          Status: Denegado');
         $order->save();
     }
@@ -2508,8 +2508,10 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $order->setData('state', Mage_Sales_Model_Order::STATE_CLOSED);
         $order->setData('status', 'closed');
         $order->addStatusToHistory(closed, 
-        'O processo de emissão da Nota Fiscal Eletrõnica (NF-e) de devolução foi completado.<br/>
-         A Chave de Acesso da NF-e é: '.substr($nfe->getIdTag(),3).'<br/>
+        'O processo de emissão da Nota Fiscal Eletrônica (NF-e) de devolução foi completado.<br/>
+         Série: '.$nfe->getSerie().'<br/>   
+         Número: '.$nfe->getNNf().'<br/>   
+         Chave: '.substr($nfe->getIdTag(),3).'<br/>
          Status: Completo');
         $order->save();
         $nfe->setStatus('7');

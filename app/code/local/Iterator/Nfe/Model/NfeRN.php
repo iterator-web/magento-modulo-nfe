@@ -674,7 +674,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeEntrada->setIdTag('NFe'.$chave);
         $nfeEntrada->setCUf($cUF);
         $nfeEntrada->setCNf($cNF);
-        $nfeEntrada->setNatOp('Venda de Mercadoria');
+        $nfeEntrada->setNatOp(utf8_encode('Devolução de venda'));
         $nfeEntrada->setIndPag($indPag);
         $nfeEntrada->setMod($mod);
         $nfeEntrada->setSerie($serie);
