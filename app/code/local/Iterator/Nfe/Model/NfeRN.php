@@ -329,7 +329,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $unidade = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('unidade');
                 $tipoMercadoria = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_mercadoria');
                 $tipoBrinde = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_brinde');
-                if($tipoBrinde == 'Amostra' || $tipoBrinde == 'Brinde') {
+                if($tipoBrinde == 'Amostra' && $item->getPrice() == '0.000' || $tipoBrinde == 'Brinde' && $item->getPrice() == '0.000') {
                     $presente = true;
                     if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
                         $cfop = '5910';

@@ -560,8 +560,17 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     if($itensArray['option_'.$i]['produto'] && $itensArrayDelete['option_'.$i] != '1') {
                         $nfeProduto = Mage::getModel('nfe/nfeproduto')->getCollection()
                                 ->addFieldToFilter('nfe_id', array('eq' => $nfeId))
-                                ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']))
-                                ->getFirstItem();
+                                ->addFieldToFilter('produto', array('eq' => $itensArray['option_'.$i]['produto']));
+                        if($nfeProduto->count() > 1) {
+                            if(isset($produtoExiste[$itensArray['option_'.$i]['produto']])) {
+                                $nfeProduto = $nfeProduto->getLastItem();
+                            } else {
+                                $nfeProduto = $nfeProduto->getFirstItem();
+                                $produtoExiste[$itensArray['option_'.$i]['produto']] = true;
+                            }
+                        } else {
+                            $nfeProduto = $nfeProduto->getFirstItem();
+                        }
                         /*
                         if($itensArray['option_'.$i]['c_ean'] == '' || $itensArray['option_'.$i]['c_ean'] == '0') {
                             $erro = true;
