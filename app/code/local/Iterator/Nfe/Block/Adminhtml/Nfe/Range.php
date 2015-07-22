@@ -53,6 +53,6 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Range extends Mage_Adminhtml_Block_Widget
     }  
  
     public function getHeaderText() {
-        return Mage::helper('motorimpostos')->__(utf8_encode('Gerenciar Range da NF-e'));
+        return Mage::helper('nfe')->__(utf8_encode('Gerenciar Range da NF-e'));
     }  
 }
