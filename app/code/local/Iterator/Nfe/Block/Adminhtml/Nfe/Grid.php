@@ -52,7 +52,14 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
                 'onclick'   => "setLocation('".$this->getUrl('*/*/editRange')."')",
                 'class'   => 'task'
             ))->toHtml();
-        return $addButton.$html;
+        $addButtonEnviarMes = $this->getLayout()->createBlock('adminhtml/widget_button')
+            ->setData(array(
+                'label'     => Mage::helper('adminhtml')->__(utf8_encode('Enviar NF-e do Mês')),
+                'onclick'   => "setLocation('".$this->getUrl('*/*/editEnviar')."')",
+                'class'   => 'task'
+            ))->toHtml();
+        
+        return $addButtonEnviarMes.$addButton.$html;
     }
      
     protected function _getCollectionClass() {

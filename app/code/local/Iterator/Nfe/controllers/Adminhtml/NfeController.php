@@ -1052,7 +1052,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
     public function editRangeAction() {
         $model = Mage::getModel('nfe/nferange')->load('1');
         $this->_title($model->getId() ? $model->getCodigo() : $this->__(utf8_encode('Gerenciar Range da NF-e')));
-        $data = Mage::getSingleton('adminhtml/session')->getAliquotaSn(true);
+        $data = Mage::getSingleton('adminhtml/session')->getNfeRange(true);
         if (!empty($data)) {
             $model->setData($data);
         }
@@ -1083,6 +1083,66 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             }
             catch (Exception $e) {
                 Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto a Range da NF-e era salva.'));
+            }
+            Mage::getSingleton('adminhtml/session')->setAliquotaSn($postData);
+            $this->_redirectReferer();
+        }
+    }
+    
+    public function editEnviarAction() {
+        $model = Mage::getModel('nfe/nfe');
+        $data = Mage::getSingleton('adminhtml/session')->getNfeEnviar(true);
+        if (!empty($data)) {
+            $model->setData($data);
+        }
+        Mage::register('nfe_enviar', $model);
+        
+        $this->_initAction()
+            ->_addBreadcrumb($this->__(utf8_encode('Enviar NF-e do Mês')))
+            ->_addContent($this->getLayout()->createBlock('nfe/adminhtml_nfe_enviar')->setData('action', $this->getUrl('*/*/saveEnviar')))
+            ->renderLayout();
+    }
+    
+    public function saveEnviarAction() {
+        $postData = $this->getRequest()->getPost();
+        if ($postData) {
+            try {
+                $arquivosXml = array();
+                $diaInicial = '01';
+                $diaFinal = '31';
+                $mes = $postData['mes'];
+                $ano = date('Y');
+                $nfeCollection = Mage::getModel('nfe/nfe')->getCollection();
+                $nfeCollection->addFieldToFilter('dh_recbto', array('date' => true, 'from' => $ano.$mes.$diaInicial.' 00:00:00'));
+                $nfeCollection->addFieldToFilter('dh_recbto', array('date' => true, 'to' => $ano.$mes.$diaFinal.' 23:59:59'));
+                foreach($nfeCollection as $nfe) {
+                    if($nfe->getTpNf() == '0') {
+                        $tipo = 'entrada';
+                    } else {
+                        $tipo = 'saida';
+                    }
+                    $arquivosXml[] = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag() . '.xml';
+                }
+                $nfeCollectionInutilizados = Mage::getModel('nfe/nfe')->getCollection();
+                $nfeCollectionInutilizados->addFieldToFilter('status', array('eq' => '9'));
+                $nfeCollectionInutilizados->addFieldToFilter('dh_emi', array('date' => true, 'from' => $ano.$mes.$diaInicial.' 00:00:00'));
+                $nfeCollectionInutilizados->addFieldToFilter('dh_emi', array('date' => true, 'to' => $ano.$mes.$diaFinal.' 23:59:59'));
+                foreach($nfeCollectionInutilizados as $nfeInutilizado) {
+                    $arquivosXml[] = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . 'inutilizado' . DS . $nfeInutilizado->getIdTag() . '.xml';
+                }
+                $arquivoZip = Mage::getBaseDir(). DS . 'nfe' . DS . 'zip' . DS . 'NFeMes' . '.zip';
+                $this->createZipFile($arquivosXml, $arquivoZip, true);
+                $this->sendMailAttachedZip($arquivoZip, $postData['mes'], $postData['email']);
+                Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('O e-mail com as NF-e do Mês foi enviado com sucesso para o seguinte destinatário: '.$postData['email'])));
+                $this->_redirect('*/*/');
+                return;
+            } 
+            catch (Mage_Core_Exception $e) {
+                $this->_getSession()->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                $this->_getSession()->addError($this->__('O E-mail com as NF-e n&atilde;o pode ser enviado.'));
+                Mage::logException($e);
             }
             Mage::getSingleton('adminhtml/session')->setAliquotaSn($postData);
             $this->_redirectReferer();
@@ -1395,6 +1455,43 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $nfeIdentificacaoEmitente->setFone($telefone);
         $nfeIdentificacaoEmitente->setIe($ie);
         $nfeIdentificacaoEmitente->setCrt($crt);    
+    }
+    
+    private function createZipFile($files = array(), $destination = '', $overwrite = false) {
+        if (file_exists($destination) && $overwrite === false) { return false; }
+	if (count($files)) {
+            $zip = new ZipArchive();
+            if ($zip->open($destination, $overwrite ? ZIPARCHIVE::OVERWRITE : ZIPARCHIVE::CREATE) !== true) {
+                return false;
+            }
+            foreach($files as $file) {
+                if(file_exists($file)) {
+                    $zip->addFile($file, basename($file));
+                }
+            }
+            $zip->close();
+            return true;
+	} else {
+            return false;
+	}
+    }
+    
+    private function sendMailAttachedZip($arquivoZip, $mes, $destinatario) {
+        $mailTemplate = Mage::getModel('core/email_template');
+        $mailTemplate->setSenderName(Mage::getStoreConfig('trans_email/ident_general/name'));
+        $mailTemplate->setSenderEmail(Mage::getStoreConfig('trans_email/ident_general/email'));
+        $mailTemplate->setTemplateSubject(utf8_encode('Notas Fiscais Eletrônicas da empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao')));
+        $mailTemplate->setTemplateText(utf8_encode('Olá, <br/><br/>Segue em anexo arquivo compactado contendo as <b>Notas Fiscais Eletrônicas (NF-e)</b> emitidas pela empresa <b>'.Mage::getStoreConfig('nfe/emitente_opcoes/razao').'</b> no Mês '.$mes.' do ano vigente.<br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
+        $mailTemplate->getMail()->createAttachment(file_get_contents($arquivoZip), Zend_Mime::TYPE_OCTETSTREAM, Zend_Mime::DISPOSITION_ATTACHMENT, Zend_Mime::ENCODING_BASE64, 'NFeMes.zip');
+        $mailTemplate->send($destinatario, $destinatario);
+        
+        $user = Mage::getSingleton('admin/session');
+        $mailTemplateAdmin = Mage::getModel('core/email_template');
+        $mailTemplateAdmin->setSenderName(Mage::getStoreConfig('trans_email/ident_general/name'));
+        $mailTemplateAdmin->setSenderEmail(Mage::getStoreConfig('trans_email/ident_general/email'));
+        $mailTemplateAdmin->setTemplateSubject(utf8_encode('Envio de Notas Fiscais Eletrônicas da empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao')));
+        $mailTemplateAdmin->setTemplateText(utf8_encode('Olá, <br/><br/>O usuário administrativo <b>'.$user->getUser()->getUsername().'</b> pertencente ao ID <b>'.$user->getUser()->getUserId().'</b> fez o envio de Notas Fiscais Eletrônicas (NF-e) emitidas pela empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao').' no Mês '.$mes.' do ano vigente, para o desinatário com o seguinte endereço de e-mail: <b>'.$destinatario.'</b><br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
+        $mailTemplateAdmin->send(Mage::getStoreConfig('trans_email/ident_general/email'), Mage::getStoreConfig('trans_email/ident_general/email'));
     }
 }
 
