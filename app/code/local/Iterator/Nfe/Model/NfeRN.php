@@ -93,7 +93,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $chave .= $cDV;
         $indPag = $this->getFormaPagamento($order);
         if($indPag == null) {
-            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->setNumero($nNF);
             $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('A forma de pagamento não é válida. Pedido: '.$order->getIncrementId());
@@ -109,7 +109,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
         $cMunFG = Mage::getStoreConfig('nfe/emitente_opcoes/codigo_municipio');
         if(!$cMunFG) {
-            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->setNumero($nNF);
             $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('O Código do Município do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
@@ -173,7 +173,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('Uma ou mais informações do emitente da NF-e não são válidas. Pedido: '.$order->getIncrementId());
             try {
-                $nfeRange->setNumero($novoRangeNumero-1);
+                $nfeRange->setNumero($nNF);
                 $nfeRange->save();
                 $nfe->delete();
                 $resource = Mage::getSingleton('core/resource');
@@ -228,7 +228,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $retorno['status'] = 'erro';
                 $retorno['msg'] = utf8_encode('O CNPJ do destinatário da NF-e não é válido. Pedido: '.$order->getIncrementId());
                 try {
-                    $nfeRange->setNumero($novoRangeNumero-1);
+                    $nfeRange->setNumero($nNF);
                     $nfeRange->save();
                     $nfeIdentificacaoEmitente->delete();
                     $nfe->delete();
@@ -257,7 +257,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $retorno['status'] = 'erro';
                 $retorno['msg'] = utf8_encode('O CPF do destinatário da NF-e não é válido. Pedido: '.$order->getIncrementId());
                 try {
-                    $nfeRange->setNumero($novoRangeNumero-1);
+                    $nfeRange->setNumero($nNF);
                     $nfeRange->save();
                     $nfeIdentificacaoEmitente->delete();
                     $nfe->delete();
@@ -625,7 +625,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $chave .= $cDV;
         $indPag = $this->getFormaPagamento($order);
         if($indPag == null) {
-            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->setNumero($nNF);
             $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('A forma de pagamento não é válida. Pedido: '.$order->getIncrementId());
@@ -641,7 +641,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
         $cMunFG = Mage::getStoreConfig('nfe/emitente_opcoes/codigo_municipio');
         if(!$cMunFG) {
-            $nfeRange->setNumero($novoRangeNumero-1);
+            $nfeRange->setNumero($nNF);
             $nfeRange->save();
             $retorno['status'] = 'erro';
             $retorno['msg'] = utf8_encode('O Código do Município do emitente da NF-e não é válido. Pedido: '.$order->getIncrementId());
