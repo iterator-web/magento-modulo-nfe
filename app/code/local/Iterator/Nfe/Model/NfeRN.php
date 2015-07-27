@@ -219,7 +219,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $cliente->getTaxvat()),0,14); 
             }
         } else {
-            $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $order->getBillingAddress()->getCpfcnpj()),0,14); 
+            if($order->getCustomerTaxvat()) {
+                $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $order->getCustomerTaxvat()),0,14); 
+            } else {
+                $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $order->getBillingAddress()->getCpfcnpj()),0,14); 
+            }
         }
         
         $cidade = str_replace(array('\'','&'), array(' ','e'), $order->getShippingAddress()->getCity());
