@@ -2464,7 +2464,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
          Chave: '.substr($nfe->getIdTag(),3).'<br/>
          Status: Completo');
         $order->save();
-        if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {
+        if(strpos($order->getCustomerEmail(),'extra.com.br') !== false) {
             $order->addStatusToHistory(nfe_enviada, 
             'chave de acesso: '.substr($nfe->getIdTag(),3));
             $order->save();
