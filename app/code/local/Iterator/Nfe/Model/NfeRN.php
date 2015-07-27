@@ -211,12 +211,17 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeIdentificacaoEmitente->save();      
         
         $nfeIdentificacaoDestinatario = Mage::getModel('nfe/nfeidentificacao');
-        $cliente = Mage::getModel('customer/customer')->load($order->getCustomerId());
-        if($cliente->getCpfcnpj()) {
-            $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $cliente->getCpfcnpj()),0,14);
+        if($order->getCustomerId()) {
+            $cliente = Mage::getModel('customer/customer')->load($order->getCustomerId());
+            if($cliente->getCpfcnpj()) {
+                $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $cliente->getCpfcnpj()),0,14);
+            } else {
+                $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $cliente->getTaxvat()),0,14); 
+            }
         } else {
-            $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $cliente->getTaxvat()),0,14); 
+            $cpfCnpj = substr(eregi_replace ("[^0-9]", "", $order->getBillingAddress()->getCpfcnpj()),0,14); 
         }
+        
         $cidade = str_replace(array('\'','&'), array(' ','e'), $order->getShippingAddress()->getCity());
         $estadoDestinatario = Mage::getModel('directory/region')->load($order->getShippingAddress()->getRegionId());
         $nfeMunicipio = Mage::getModel('nfe/nfemunicipio')->getCollection()->addfieldToFilter('nome', array('like' => $cidade))->getFirstItem();
@@ -245,10 +250,17 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             }
             $nfeIdentificacaoDestinatario->setTipoPessoa(2);
             $nfeIdentificacaoDestinatario->setCnpj($cpfCnpj);
-            $nfeIdentificacaoDestinatario->setXNome($cliente->getRazaosocial());
-            if($cliente->getIe() && strtolower($cliente->getIe()) != 'isento') {
+            if($order->getCustomerId()) {
+                $razaoSocialDestinatario = $cliente->getRazaosocial();
+                $ieDestinatario = $cliente->getIe();
+            } else {
+                $razaoSocialDestinatario = $order->getCustomerFirstname();
+                $ieDestinatario = $order->getBillingAddress()->getIe();
+            }
+            $nfeIdentificacaoDestinatario->setXNome($razaoSocialDestinatario);
+            if($ieDestinatario && strtolower($ieDestinatario) != 'isento') {
                 $nfeIdentificacaoDestinatario->setIndIeDest('1');
-                $nfeIdentificacaoDestinatario->setIe($cliente->getIe());
+                $nfeIdentificacaoDestinatario->setIe($ieDestinatario);
             } else {
                 $nfeIdentificacaoDestinatario->setIndIeDest('9');
             }
@@ -912,7 +924,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         //destinatário
         $CNPJ = $nfeIdentificacaoDestinatario->getCnpj();
         $CPF = $nfeIdentificacaoDestinatario->getCpf();
-        $idEstrangeiro = $nfeIdentificacaoDestinatario->getIdEstrangeiro;
+        $idEstrangeiro = $nfeIdentificacaoDestinatario->getIdEstrangeiro();
         $xNome = $nfeIdentificacaoDestinatario->getXNome();
         $indIEDest = $nfeIdentificacaoDestinatario->getIndIeDest();
         $IE = $nfeIdentificacaoDestinatario->getIe();
