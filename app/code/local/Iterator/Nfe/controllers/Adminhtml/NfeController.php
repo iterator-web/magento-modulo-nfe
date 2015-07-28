@@ -298,7 +298,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $erro = true;
                     $msgErro = utf8_encode('O bairro do endereço do destinatário da NF-e não é válido.');
                 }
-                if(!$validarCampos->validaEMail($postData['destinatario']['email'])) {
+                if($postData['destinatario']['email'] != '' && !$validarCampos->validaEMail($postData['destinatario']['email'])) {
                     $erro = true;
                     $msgErro = utf8_encode('O e-mail do destinatário da NF-e não é válido.');
                 }
