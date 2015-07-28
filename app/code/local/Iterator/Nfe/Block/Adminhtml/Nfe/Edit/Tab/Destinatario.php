@@ -111,7 +111,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Destinatario extends Mage_Adminh
         ));
         
         $fieldsetEndereco = $form->addFieldset('base_fieldset_endereco', array(
-            'legend'    => utf8_encode('Endereço do Emitente'),
+            'legend'    => utf8_encode('Endereço do Destinatário'),
             'class'     => 'fieldset',
         ));
         
