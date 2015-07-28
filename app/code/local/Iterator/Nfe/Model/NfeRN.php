@@ -310,7 +310,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeIdentificacaoDestinatario->setCPais('1058');
         $nfeIdentificacaoDestinatario->setXPais('Brasil');
         $nfeIdentificacaoDestinatario->setFone(preg_replace('/[^\d]/', '', $order->getShippingAddress()->getTelephone()));
-        $nfeIdentificacaoDestinatario->setEmail($order->getCustomerEmail());
+        if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {
+            $nfeIdentificacaoDestinatario->setEmail($order->getCustomerEmail());
+        }
         $nfeIdentificacaoDestinatario->save();
         
         $existeMotorImpostos = Mage::getConfig()->getModuleConfig('Iterator_MotorImpostos')->is('active', 'true');
