@@ -1235,6 +1235,91 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $nfeHelper->gerarDanfe($sXml, $nfe, 'I');
     }
     
+    public function ReportAction() {
+        $model = Mage::getModel('nfe/nfe');
+        $data = Mage::getSingleton('adminhtml/session')->getNfeData(true);
+        if (!empty($data)) {
+            $model->setData($data);
+        }  
+        Mage::register('nfe_data', $model);
+        $this->_initAction()
+            ->_setActiveMenu('report')
+            ->_title($this->__('sales'))->_title($this->__('NF-e'))->_title($this->__(utf8_encode('Relatório de Notas Fiscais Eletrônicas (NF-e)')))
+            ->_addBreadcrumb($this->__(utf8_encode('Novo Relatório de Notas Fiscais Eletrônicas (NF-e)')))
+            ->_addContent($this->getLayout()->createBlock('nfe/adminhtml_nfe_report')->setData('action', $this->getUrl('*/*/gerarRelatorio')))
+            ->renderLayout();
+    }
+    
+    public function gerarRelatorioAction() {
+        $postData = $this->getRequest()->getPost();
+        if ($postData) {
+            try {
+                Mage::getSingleton('adminhtml/session')->setNfePost($postData);
+                echo '<script type="text/javascript">window.location.replace("'.Mage::helper('adminhtml')->getUrl('*/nfe/report/').'");</script>';
+                Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('O relatório de NF-e foi gerado com sucesso.')));
+            }  
+            catch (Mage_Core_Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            }
+            catch (Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__(utf8_encode('Um erro ocorreu enquanto este relatório de NF-e era gerado.')));
+            }
+            if($postData['dh_recbto_desde']) {
+                $format = Mage::app()->getLocale()->getDateTimeFormat(Mage_Core_Model_Locale::FORMAT_TYPE_SHORT);
+                $dhRecbtoDesde = Mage::app()->getLocale()->date($postData['dh_recbto_desde'], $format);
+                $postData['dh_recbto_desde'] = Mage::getModel('core/date')->gmtDate(null, $dhRecbtoDesde->getTimestamp());
+            }
+            if($postData['dh_recbto_ate']) {
+                $format = Mage::app()->getLocale()->getDateTimeFormat(Mage_Core_Model_Locale::FORMAT_TYPE_SHORT);
+                $dhRecbtoAte = Mage::app()->getLocale()->date($postData['dh_recbto_ate'], $format);
+                $postData['dh_recbto_ate'] = Mage::getModel('core/date')->gmtDate(null, $dhRecbtoAte->getTimestamp());
+            }
+            Mage::getSingleton('adminhtml/session')->setNfeData($postData);
+        }
+    }
+    
+    public function abrirRelatorioAction() {
+        // Foi necessário pelo fato de alguns navegadores modernos possuirem bloqueios contra redirecionamentos com javascript feitos de forma automatizada, ou seja, sem ação do usuário.
+        // Este tempo de espera foi setado para que não ocorra do método imprimirRelatorio serja carregado antes que o gerarRelatorio que é o responsável por receber os dados do formulário.
+        echo utf8_encode('<div style="margin:60px auto;text-align:center;"><img src="'.Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_SKIN).'adminhtml/default/default/images/iterator/report/logo.png'.'"/></div><div style="margin:30px auto;text-align:center;font-size:32px;">Aguarde enquanto seu relatório está sendo processado...</div>');
+        echo '<script type="text/javascript">setTimeout(function(){window.location.replace("'.Mage::helper('adminhtml')->getUrl('*/nfe/imprimirRelatorio/').'")}, 1500);</script>';
+    }
+    
+    public function imprimirRelatorioAction() {
+        $nfeModel = Mage::getModel('nfe/nfe');
+        $data = Mage::getSingleton('adminhtml/session')->getNfePost();
+        
+        if (!empty($data)) {
+            $nfeModel->setData($data);
+            $nfeCollection = Mage::getModel('nfe/nfe')->getCollection();
+            if($nfeModel->getTpNf() != '') {
+                $nfeCollection->addFieldToFilter('main_table.tp_nf', array('eq' => $nfeModel->getTpNf()));
+            }
+            if($nfeModel->getStatus() != '') {
+                $nfeCollection->addFieldToFilter('main_table.status', array('eq' => $nfeModel->getStatus()));
+            }
+            if($data['dh_recbto_desde']) {
+                $format = Mage::app()->getLocale()->getDateTimeFormat(Mage_Core_Model_Locale::FORMAT_TYPE_SHORT);
+                $dhRecbtoDesde = Mage::app()->getLocale()->date($data['dh_recbto_desde'], $format);
+                $dhRecbtoDesdeData = substr(Mage::getModel('core/date')->gmtDate(null, $dhRecbtoDesde->getTimestamp()), 0, 10);
+                $nfeCollection->addFieldToFilter('main_table.dh_recbto', array('date' => true, 'from' => $dhRecbtoDesdeData.' 00:00:00'));
+            }
+            if($data['dh_recbto_ate']) {
+                $format = Mage::app()->getLocale()->getDateFormat(Mage_Core_Model_Locale::FORMAT_TYPE_SHORT);
+                $dhRecbtoAte = Mage::app()->getLocale()->date($data['dh_recbto_ate'], $format);
+                $dhRecbtoAteData = substr(Mage::getModel('core/date')->gmtDate(null, $dhRecbtoAte->getTimestamp()), 0, 10);
+                $nfeCollection->addFieldToFilter('main_table.dh_recbto', array('date' => true, 'to' => $dhRecbtoAteData.' 23:59:59'));
+            }
+            
+            $nfeCollection->setOrder($data['ordenar'], $data['posicao']);
+            
+            $nfePdf = Mage::helper('nfe/pdf_emitidas');
+            $nfePdf->render($nfeCollection);
+            
+            Mage::getSingleton('adminhtml/session')->unsNfePost();
+        }
+    }
+    
     protected function _isAllowed() {
         return Mage::getSingleton('admin/session')->isAllowed('sales/nfe');
     }
@@ -1328,7 +1413,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $html .= '</ul>';
         $html .= '<div style="padding:30px 0;">';
         $html .= '<ul>';
-        $html .= '<li><strong>Itens da Entrada:</strong></li>';
+        $html .= '<li><strong>Itens da NF-e:</strong></li>';
         $html .= utf8_encode('
                 <li style="background:#ccc; border:1px solid #333;">
                     <strong style="margin:0 180px 0 70px;">Produto</strong> 

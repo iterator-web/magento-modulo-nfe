@@ -31,6 +31,15 @@
                 </nfe>
             </children>
         </sales>
+        <report>
+            <children>
+                <nfe_report>
+                    <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                    <sort_order>999</sort_order>
+                    <action>adminhtml/nfe/report</action>
+                </nfe_report>
+            </children>
+        </report>
     </menu>
     <acl>
         <resources>
@@ -52,7 +61,15 @@
                                 </children>
                             </nfe>
                         </children>
-                    </sales>        
+                    </sales>
+                    <report>
+                        <children>
+                            <nfe_report>
+                                <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                                <sort_order>999</sort_order>
+                            </nfe_report>
+                        </children>
+                    </report>        
                     <system>
                         <children>
                             <config>
