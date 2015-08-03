@@ -153,7 +153,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfe->setIndFinal('1');
         $nfe->setIndPres('2');
         $nfe->setProcEmi('0');
-        $nfe->setVerProc('1.0.0');
+        $nfe->setVerProc('ITERATOR_NFE_1.0_MG');
         $nfe->save();
         
         $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao');
@@ -710,7 +710,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeEntrada->setIndFinal('1');
         $nfeEntrada->setIndPres('2');
         $nfeEntrada->setProcEmi('0');
-        $nfeEntrada->setVerProc('1.0.0');
+        $nfeEntrada->setVerProc('ITERATOR_NFE_1.0_MG');
         $nfeEntrada->setTemReferencia(1);
         $nfeEntrada->save();
         
