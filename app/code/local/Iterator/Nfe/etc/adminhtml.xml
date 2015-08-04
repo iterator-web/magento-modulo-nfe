@@ -33,11 +33,15 @@
         </sales>
         <report>
             <children>
-                <nfe_report>
-                    <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
-                    <sort_order>999</sort_order>
-                    <action>adminhtml/nfe/report</action>
-                </nfe_report>
+                <salesroot translate="title" module="reports">
+                    <children>
+                        <nfe_report>
+                            <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                            <sort_order>999</sort_order>
+                            <action>adminhtml/nfe/report</action>
+                        </nfe_report>
+                    </children>
+                </salesroot>
             </children>
         </report>
     </menu>
@@ -64,10 +68,13 @@
                     </sales>
                     <report>
                         <children>
-                            <nfe_report>
-                                <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
-                                <sort_order>999</sort_order>
-                            </nfe_report>
+                            <salesroot translate="title" module="reports">
+                                <children>
+                                    <nfe_report>
+                                        <title><![CDATA[Nota Fiscal Eletr&ocirc;nica]]></title>
+                                    </nfe_report>
+                                </children>
+                            </salesroot>
                         </children>
                     </report>        
                     <system>
