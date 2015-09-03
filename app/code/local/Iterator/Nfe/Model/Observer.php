@@ -57,6 +57,10 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                         $nfeHelper->enviarEmail($nfe);
                         $nfeHelper->setCompleto($nfe);
                     }
+                } else {
+                    $nfe->setStatus('7');
+                    $nfe->setMensagem(utf8_encode('Processo de emissão da NF-e completo.'));
+                    $nfe->save();
                 }
             } else if($nfe->getStatus() == '2') {
                 $nfeHelper = Mage::helper('nfe/nfeHelper');
@@ -89,6 +93,10 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                                 $nfeHelper->enviarEmail($nfe);
                                 $nfeHelper->setCompleto($nfe);
                             }
+                        } else {
+                            $nfe->setStatus('7');
+                            $nfe->setMensagem(utf8_encode('Processo de emissão da NF-e completo.'));
+                            $nfe->save();
                         }
                     } else {
                         $nfe->setStatus('2');
@@ -144,6 +152,10 @@ class Iterator_Nfe_Model_Observer extends Mage_Core_Model_Abstract {
                                     $nfeHelper->enviarEmail($nfe);
                                     $nfeHelper->setCompleto($nfe);
                                 }
+                            } else {
+                                $nfe->setStatus('7');
+                                $nfe->setMensagem(utf8_encode('Processo de emissão da NF-e completo.'));
+                                $nfe->save();
                             }
                         } else {
                             $nfe->setStatus('4');

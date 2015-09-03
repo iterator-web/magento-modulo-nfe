@@ -255,7 +255,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             $nfeIdentificacaoDestinatario->setTipoPessoa(2);
             $nfeIdentificacaoDestinatario->setCnpj($cpfCnpj);
             if($order->getCustomerId()) {
-                $razaoSocialDestinatario = $cliente->getRazaosocial();
+                $razaoSocialDestinatario = $cliente->getEmpresa();
                 $ieDestinatario = $cliente->getIe();
             } else {
                 $razaoSocialDestinatario = $order->getCustomerFirstname();
