@@ -437,6 +437,14 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $vUnComTrib = '0.1';
                     $vProd = '0.1' * $qtdPedido;
                 }
+                $descontoDescricao = $order->getDiscountDescription();
+                if(strpos($descontoDescricao, utf8_encode('Cartão de Crédito à Vista')) !== false) {
+                    if($order->getShippingAmount() > 0) {
+                        $fretePedido = ($vProd - $vDesc) * $order->getShippingAmount() / ($order->getGrandTotal() - $order->getShippingAmount());
+                    }
+                    $valorDesconto = $this->getValorDescontoCartao($descontoDescricao);
+                    $vDesc += (($vProd - $vDesc + $fretePedido) * $valorDesconto) / 100;
+                }
                 $existeRewards = Mage::getConfig()->getModuleConfig('Magestore_Affiliateplus')->is('active', 'true');
                 if($existeRewards) {
                     if($order->getRewardpointsDiscount() > 0) {
@@ -1713,5 +1721,22 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $produtoNfe->delete();
             }
         }
+    }
+    
+    private function getValorDescontoCartao($descontoDescricao) {
+        $valorDesconto = 0;
+        if(strpos($descontoDescricao, ',')) {
+            $descontos = explode(',', $descontoDescricao);
+            foreach($descontos as $desconto) {
+                if (strpos($desconto, utf8_encode('Cartão de Crédito à Vista')) !== false) {
+                    $desconto = substr($desconto, 25);
+                    $valorDesconto = preg_replace('/[^\d]/', '', $desconto);
+                }
+            }
+        } else {
+            $desconto = substr($descontoDescricao, 25);
+            $valorDesconto = preg_replace('/[^\d]/', '', $desconto);
+        }
+        return $valorDesconto;
     }
 }
