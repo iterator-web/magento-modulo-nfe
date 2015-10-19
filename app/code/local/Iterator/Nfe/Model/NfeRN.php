@@ -824,9 +824,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $serie = strval(intval($nfe->getSerie())); //serie da NFe
         $nNF = strval(intval($nfe->getNNf())); // numero da NFe
         $dhEmi = $validarCampos->getHoraCerta($nfe->getDhEmi());
-        $dhEmi = str_replace(' ', 'T', $dhEmi).'-03:00';  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
+        $horario = Mage::getStoreConfig('nfe/nfe_opcoes/horario');
+        $dhEmi = str_replace(' ', 'T', $dhEmi).$horario;  //para versão 3.00 '2014-02-03T13:22:42-3.00' não informar para NFCe
         $dhSaiEnt = $validarCampos->getHoraCerta($nfe->getDhSaiEnt());
-        $dhSaiEnt = str_replace(' ', 'T', $dhSaiEnt).'-03:00'; //versão 2.00, 3.00 e 3.10
+        $dhSaiEnt = str_replace(' ', 'T', $dhSaiEnt).$horario; //versão 2.00, 3.00 e 3.10
         $tpNF = $nfe->getTpNf();
         $idDest = $nfe->getIdDest(); //1=Operação interna; 2=Operação interestadual; 3=Operação com exterior.
         $cMunFG = $nfe->getCMunFg();

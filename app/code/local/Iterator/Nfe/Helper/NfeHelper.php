@@ -1068,7 +1068,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
                 $tpAmb       = $protocolo['tpAmb'];
                 $verAplic    = $protocolo['verAplic'];
                 $chNFe       = $protocolo['chNFe'];
-                $dhRecbto    = str_replace(' ', 'T', $protocolo['dhRecbto']).$this->timeZone;
+                $dhRecbto    = str_replace(' ', 'T', $protocolo['dhRecbto']).Mage::getStoreConfig('nfe/nfe_opcoes/horario');
                 $nProt       = $protocolo['nProt'];
                 $cStat       = $protocolo['cStat'];
                 $tpEvento    = '110111';
@@ -1893,7 +1893,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
             //Data e hora do evento no formato AAAA-MM-DDTHH:MM:SSTZD (UTC)
             $validarCampos = Mage::helper('nfe/ValidarCampos');
             $dataAtual = $validarCampos->getHoraCerta(date('Y-m-d H:i:s'));
-            $dhEvento = str_replace(' ', 'T', $dataAtual).$this->timeZone;
+            $dhEvento = str_replace(' ', 'T', $dataAtual).Mage::getStoreConfig('nfe/nfe_opcoes/horario');
             //se o envio for para svan mudar o numero no orgão para 91
             if ($this->enableSVAN) {
                 $cOrgao='90';
