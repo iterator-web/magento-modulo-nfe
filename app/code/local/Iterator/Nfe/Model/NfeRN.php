@@ -323,6 +323,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             if($item->getProductType() == 'simple') {
                 $cfop = null;
                 $orig = null;
+                $cest = null;
                 $cstCsosn = null;
                 $modBc = null;
                 $modBcSt = null;
@@ -406,6 +407,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                         $exTipi = $dadosNcm->getExTipi();
                         $aliquotaIbpt = $dadosNcm->getAliquotaIbpt();
                         $existeDadosNcm = true;
+                        $cestModel = $motorCalculos->getDadosCest($ncm);
+                        if($cestModel->getCestCodigo()) {
+                            $cest = $cestModel->getCestCodigo();
+                        }
                     }
                 }
                 $nfeProduto->setNfeId($nfeId);
@@ -414,6 +419,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $nfeProduto->setCProd($item->getSku());
                 $nfeProduto->setCEan($gtin);
                 $nfeProduto->setNcm($ncm);
+                $nfeProduto->setCest($cest);
                 $nfeProduto->setExtipi($exTipi);
                 $nfeProduto->setCfop($cfop);
                 $nfeProduto->setUCom($unidade);
@@ -1121,6 +1127,12 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $vCIDE = $nfeProdutoEspecifico->getVCide();
                     $resposta = $nfeCriarXML->tagarma($nItem, $cProdANP, $pMixGN, $codif, $qTemp, $ufCons, $qBCProd, $vAliqProd, $vCIDE);
                 }
+            }
+            
+            //CEST
+            $CEST = $nfeProduto->getCest();
+            if($CEST) {
+                $resposta = $nfeCriarXML->tagCEST($nItem, $CEST);
             }
             
             if($nfe->getTemImportacao() == '1') {

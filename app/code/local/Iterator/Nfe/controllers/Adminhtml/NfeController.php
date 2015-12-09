@@ -612,6 +612,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $nfeProduto->setNcm($itensArray['option_'.$i]['ncm']);
                         $nfeProduto->setNve($itensArray['option_'.$i]['nve']);
                         $nfeProduto->setExtipi($itensArray['option_'.$i]['extipi']);
+                        $nfeProduto->setCest($itensArray['option_'.$i]['cest']);
                         $nfeProduto->setCfop($itensArray['option_'.$i]['cfop']);
                         $nfeProduto->setUCom($itensArray['option_'.$i]['u_com']);
                         $nfeProduto->setXProd($itensArray['option_'.$i]['x_prod']);

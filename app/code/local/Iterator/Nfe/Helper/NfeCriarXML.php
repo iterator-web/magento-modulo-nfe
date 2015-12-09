@@ -137,6 +137,7 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
     private $aAutXML = array(); //array de DOMNodes
     private $aDet = array(); //array de DOMNodes
     private $aProd = array(); //array de DOMNodes
+    private $aCest = array(); //array de DOMNodes
     private $aDetExport = array(); //array de DOMNodes
     private $aDI = array(); //array de DOMNodes
     private $aAdi = array(); //array de DOMNodes
@@ -896,6 +897,19 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         if (empty($this->aProd)) {
             return '';
         }
+        //insere CEST
+        if (! empty($this->aCest)) {
+            foreach ($this->aCest as $nItem => $cest) {
+                $prod = $this->aProd[$nItem];
+                foreach ($cest as $child) {
+                    $node = $prod->getElementsByTagName("EXTIPI")->item(0);
+                    if (empty($node)) {
+                        $node = $prod->getElementsByTagName("CFOP")->item(0);
+                    }
+                    $prod->insertBefore($child, $node);
+                }
+            }
+        }
         //insere DI
         if (!empty($this->aDI)) {
             foreach ($this->aDI as $nItem => $aDI) {
@@ -1093,6 +1107,23 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         $this->zAddChild($prod, "nRECOPI", $nRECOPI, false, $identificador . "[item $nItem] Número do RECOPI");
         $this->aProd[$nItem] = $prod;
         return $prod;
+    }
+    
+    /**
+     * tagCEST
+     * Código Especificador da Substituição Tributária – CEST, 
+     * que identifica a mercadoria sujeita aos regimes de substituição 
+     * tributária e de antecipação do recolhimento do imposto.
+     * vide NT2015.003
+     * @param string $nItem
+     * @param string $texto
+     * @return DOMElement
+     */
+    public function tagCEST($nItem = '', $texto = '')
+    {   
+        $cest = $this->dom->createElement("CEST", $texto);
+        $this->aCest[$nItem][] = $cest;
+        return $cest;
     }
     
     /**
