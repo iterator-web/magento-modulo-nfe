@@ -37,7 +37,7 @@ $installer->startSetup();
 
 try {
 $installer->run("
-    ALTER TABLE {$installer->getTable('nfe/nfeproduto')} ADD COLUMN `cest` INT(7) UNSIGNED NULL AFTER `ncm`;
+    ALTER TABLE {$installer->getTable('nfe/nfeproduto')} ADD COLUMN `cest` INT(7) UNSIGNED ZEROFILL NULL AFTER `ncm`;
 ");
 } catch (Exception $e) {
     
