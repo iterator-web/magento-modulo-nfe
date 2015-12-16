@@ -607,6 +607,12 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $infCpl .= utf8_encode('III - PERMITE O APROVEITAMENTO DO CRÉDITO DE ICMS NO VALOR DE '.Mage::helper('core')->currency($vCredICMSSN, true, false).' CORRESPONDENTE À ALÍQUOTA DE '.number_format($dadosNcm->getAliquotaSimples(), 2, '.', '').'%, NOS TERMOS DO ART. 23 DA LEI COMPLEMENTAR Nº 123, DE 2006.  ');
                 }
             }
+            if($vFCPUFDest > 0) {
+                $infCpl .= utf8_encode('TOTAL DO ICMS RELATIVO AO FUNDO DE COMBATE À POBREZA PARA A UF DO DESTINATÁRIO '.Mage::helper('core')->currency($vFCPUFDest, true, false).'.  ');
+            }
+            if($vICMSUFDest > 0) {
+                $infCpl .= utf8_encode('TOTAL DO ICMS INTERESTADUAL PARA A UF DO DESTINATÁRIO '.Mage::helper('core')->currency($vICMSUFDest, true, false).'.  ');
+            }
         }
         $infCpl .= utf8_encode('Val Aprox dos Tributos '.Mage::helper('core')->currency($totalVTotTrib, true, false).' Fonte: IBPT');
         $nfe->setInfInfCpl($infCpl);
