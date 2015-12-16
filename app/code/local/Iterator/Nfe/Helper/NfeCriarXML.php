@@ -130,6 +130,7 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
     private $compra = ''; //DOMNode
     private $cana = ''; //DOMNode
     // Arrays
+    private $aTotICMSUFDest = array('vFCPUFDest' => '', 'vICMSUFDest' => '', 'vICMSUFRemet' => '');
     private $aNFref = array(); //array de DOMNode
     private $aDup = array(); //array de DOMNodes
     private $aReboque = array(); //array de DOMNodes
@@ -147,6 +148,7 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
     private $aComb = array(); //array de DOMNodes
     private $aImposto = array(); //array de DOMNodes
     private $aICMS = array(); //array de DOMNodes
+    private $aICMSUFDest = array(); //array de DOMNodes
     private $aICMSST = array(); //array de DOMNodes
     private $aICMSSN = array(); //array de DOMNodes
     private $aIPI = array(); //array de DOMNodes
@@ -2054,6 +2056,98 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
     }
     
     /**
+     * tagICMSUFDest
+     * Grupo ICMSUFDest NA01 pai M01
+     * tag NFe/infNFe/det[]/imposto/ICMSUFDest (opcional)
+     * Grupo a ser informado nas vendas interestaduais para consumidor final,
+     * não contribuinte do ICMS
+     * @param string $nItem
+     * @param string $vBCUFDest
+     * @param string $pFCPUFDest
+     * @param string $pICMSUFDest
+     * @param string $pICMSInter
+     * @param string $pICMSInterPart
+     * @param string $vFCPUFDest
+     * @param string $vICMSUFDest
+     * @param string $vICMSUFRemet
+     * @return DOMElement
+     */
+    public function tagICMSUFDest(
+        $nItem = '',
+        $vBCUFDest = '',
+        $pFCPUFDest = '',
+        $pICMSUFDest = '',
+        $pICMSInter = '',
+        $pICMSInterPart = '',
+        $vFCPUFDest = '',     
+        $vICMSUFDest = '',
+        $vICMSUFRemet = ''
+    ) {
+        $icmsUFDest = $this->dom->createElement('ICMSUFDest');
+        $this->zAddChild(
+            $icmsUFDest,
+            "vBCUFDest",
+            $vBCUFDest,
+            true,
+            "[item $nItem] Valor da BC do ICMS na UF do destinatário"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "pFCPUFDest",
+            $pFCPUFDest,
+            true,
+            "[item $nItem] Percentual do ICMS relativo ao Fundo de Combate à Pobreza (FCP) na UF de destino"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "pICMSUFDest",
+            $pICMSUFDest,
+            true,
+            "[item $nItem] Alíquota interna da UF do destinatário"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "pICMSInter",
+            $pICMSInter,
+            true,
+            "[item $nItem] Alíquota interestadual das UF envolvidas"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "pICMSInterPart",
+            $pICMSInterPart,
+            true,
+            "[item $nItem] Percentual provisório de partilha entre os Estados"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "vFCPUFDest",
+            $vFCPUFDest,
+            true,
+            "[item $nItem] Valor do ICMS relativo ao Fundo de Combate à Pobreza (FCP) da UF de destino"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "vICMSUFDest",
+            $vICMSUFDest,
+            true,
+            "[item $nItem] Valor do ICMS de partilha para a UF do destinatário"
+        );
+        $this->zAddChild(
+            $icmsUFDest,
+            "vICMSUFRemet",
+            $vICMSUFRemet,
+            true,
+            "[item $nItem] Valor do ICMS de partilha para a UF do remetente"
+        );
+        $this->aICMSUFDest[$nItem] = $icmsUFDest;
+        $this->aTotICMSUFDest['vICMSUFDest'] += $vICMSUFDest;
+        $this->aTotICMSUFDest['vFCPUFDest'] += $vFCPUFDest;
+        $this->aTotICMSUFDest['vICMSUFRemet'] += $vICMSUFRemet;
+        return $icmsUFDest;
+    }
+    
+    /**
      * tagIPI
      * Grupo IPI O01 pai M01
      * tag NFe/infNFe/det[]/imposto/IPI (opcional)
@@ -2504,6 +2598,9 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         $vBC = '',
         $vICMS = '',
         $vICMSDeson = '',
+        $vFCPUFDest = '',
+        $vICMSUFDest = '',
+        $vICMSUFRemet = '',
         $vBCST = '',
         $vST = '',
         $vProd = '',
@@ -2523,6 +2620,9 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
         $this->zAddChild($ICMSTot, "vBC", $vBC, true, "Base de Cálculo do ICMS");
         $this->zAddChild($ICMSTot, "vICMS", $vICMS, true, "Valor Total do ICMS");
         $this->zAddChild($ICMSTot, "vICMSDeson", $vICMSDeson, true, "Valor Total do ICMS desonerado");
+        $this->zAddChild($ICMSTot, "vFCPUFDest", $vFCPUFDest, false, "Valor total do ICMS relativo ao Fundo de Combate à Pobreza(FCP) para a UF de destino");
+        $this->zAddChild($ICMSTot, "vICMSUFDest", $vICMSUFDest, false, "Valor total do ICMS de partilha para a UF do destinatário");
+        $this->zAddChild($ICMSTot, "vICMSUFRemet", $vICMSUFRemet, false, "Valor total do ICMS de partilha para a UF do remetente");
         $this->zAddChild($ICMSTot, "vBCST", $vBCST, true, "Base de Cálculo do ICMS ST");
         $this->zAddChild($ICMSTot, "vST", $vST, true, "Valor Total do ICMS ST");
         $this->zAddChild($ICMSTot, "vProd", $vProd, true, "Valor Total dos produtos e servi�os");
@@ -3340,6 +3440,9 @@ class Iterator_Nfe_Helper_NfeCriarXML extends Mage_Core_Helper_Abstract {
             }
             if (!empty($this->aISSQN[$nItem])) {
                 $this->zAppChild($imposto, $this->aISSQN[$nItem], "Inclusão do node ISSQN");
+            }
+            if (!empty($this->aICMSUFDest[$nItem])) {
+                $this->zAppChild($imposto, $this->aICMSUFDest[$nItem], "Inclusão do node ICMSUFDest");
             }
             $this->aImposto[$nItem] = $imposto;
         }

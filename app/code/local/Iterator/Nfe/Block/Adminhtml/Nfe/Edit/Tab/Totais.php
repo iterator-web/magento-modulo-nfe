@@ -63,9 +63,33 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Totais extends Mage_Adminhtml_Bl
         
         $fieldset->addField('v_icms_deson', 'text', array(
             'name'      => 'v_icms_deson',
-            'label'     => 'Valor Total do ICMS desonerado',
-            'title'     => 'Valor Total do ICMS desonerado',
+            'label'     => 'Valor Total do ICMS Desonerado',
+            'title'     => 'Valor Total do ICMS Desonerado',
             'required'  => false,
+            'class'     => 'validate-zero-or-greater',
+        ));
+        
+        $fieldset->addField('v_fcp_uf_dest', 'text', array(
+            'name'      => 'v_fcp_uf_dest',
+            'label'     => 'Valor Total do ICMS FCP',
+            'title'     => 'Valor Total do ICMS FCP',
+            'required'  => true,
+            'class'     => 'validate-zero-or-greater',
+        ));
+        
+        $fieldset->addField('v_icms_uf_dest', 'text', array(
+            'name'      => 'v_icms_uf_dest',
+            'label'     => 'Valor Total do ICMS Interest. UF Dest.',
+            'title'     => 'Valor Total do ICMS Interest. UF Dest.',
+            'required'  => true,
+            'class'     => 'validate-zero-or-greater',
+        ));
+        
+        $fieldset->addField('v_icms_uf_remet', 'text', array(
+            'name'      => 'v_icms_uf_remet',
+            'label'     => 'Valor Total do ICMS Interest. UF Remet.',
+            'title'     => 'Valor Total do ICMS Interest. UF Remet.',
+            'required'  => true,
             'class'     => 'validate-zero-or-greater',
         ));
         

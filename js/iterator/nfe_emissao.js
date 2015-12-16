@@ -58,6 +58,10 @@ function respondToChange(event) {
         atualizarValorTotalProduto(elementId);
         atualizarValorTotalNota();
     }
+    if(elementId.indexOf('v_fcp_uf_dest') > -1 || elementId.indexOf('v_icms_uf_dest') > -1 || elementId.indexOf('v_icms_uf_remet') > -1) {
+        converterFloat(''+elementId+'', document.getElementById(''+elementId+'').value);
+        atualizarValorTotalIcmsDestino(elementId);
+    }
     if(elementId === 'v_bc' || elementId === 'v_bc_st' || elementId === 'v_icms' || elementId === 'v_st' || elementId === 'v_tot_trib' ||
             elementId === 'v_icms_deson' || elementId === 'v_ll' || elementId === 'v_pis' || elementId === 'v_cofins' || elementId === 'v_serv' || 
             elementId === 'v_bc_iss' || elementId === 'v_iss' || elementId === 'v_pis_iss' || elementId === 'v_cofins_iss' || elementId === 'v_deducao' || 
@@ -81,7 +85,8 @@ function respondToChange(event) {
             elementId.indexOf('pis_q_bc_prod') > -1 || elementId.indexOf('cofins_q_bc_prod') > -1 || elementId.indexOf('v_pis') > -1 || elementId.indexOf('v_cofins') > -1 ||
             elementId.indexOf('issqn_v_bc') > -1 || elementId.indexOf('v_aliq') > -1 || elementId.indexOf('v_issqn') > -1 || elementId.indexOf('v_deducao') > -1 ||
             elementId.indexOf('issqn_v_outro') > -1 || elementId.indexOf('v_desc_incond') > -1 || elementId.indexOf('v_desc_cond') > -1 || elementId.indexOf('v_iss_ret') > -1 ||
-            elementId.indexOf('c_servico') > -1 || elementId.indexOf('p_devol') > -1 || elementId.indexOf('v_ipi_devol') > -1) {
+            elementId.indexOf('c_servico') > -1 || elementId.indexOf('p_devol') > -1 || elementId.indexOf('v_ipi_devol') > -1 || elementId.indexOf('v_bc_uf_dest') > -1 || 
+            elementId.indexOf('p_fcp_uf_dest') > -1 || elementId.indexOf('p_icms_uf_dest') > -1 || elementId.indexOf('p_icms_inter') > -1 || elementId.indexOf('p_icms_inter_part') > -1) {
         converterFloat(''+elementId+'', document.getElementById(''+elementId+'').value);
     }
     if(elementId.indexOf('q_vol') > -1) {
@@ -131,6 +136,12 @@ function respondToChange(event) {
             exibirExportacao('desabilitar');
         }
     }
+    if(elementId === 'id_dest') {
+        habilitarIcmsDestinoOperacao(document.getElementById(''+elementId+'').value);
+    }
+    if(elementId === 'destinatario_ind_ie_dest') {
+        habilitarIcmsDestinoIndicador(document.getElementById(''+elementId+'').value);
+    }
 }
 
 function carregarNfe() {
@@ -140,7 +151,7 @@ function carregarNfe() {
     var valorTpNf = document.getElementById('tp_nf').value;
     var valorTemRetirada = document.getElementById('tem_retirada').checked;
     var valorTemEntrega = document.getElementById('tem_entrega').checked;
-    var elementosMonetarios = ['v_bc', 'v_icms', 'v_icms_deson', 'v_bc_st', 'v_st', 'v_prod', 
+    var elementosMonetarios = ['v_bc', 'v_icms', 'v_icms_deson', 'v_fcp_uf_dest', 'v_icms_uf_dest', 'v_icms_uf_remet', 'v_bc_st', 'v_st', 'v_prod', 
         'v_frete', 'v_seg', 'v_desc', 'v_ll', 'v_ipi', 'v_pis', 'v_cofins', 'v_outro', 'v_nf', 'v_tot_trib'];
     exibirReferencia(valorFinNfe);
     habilitarCamposTipoPessoa('destinatario_', valorTipoPessoaEmitente);
@@ -520,6 +531,32 @@ function exibirExportacao(processo) {
     }
 }
 
+function habilitarIcmsDestinoOperacao(destinoOperacao) {
+    indicador = document.getElementById('destinatario_ind_ie_dest').value;
+    if(destinoOperacao === '2' && indicador === '9') {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
+    } else {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
+    }
+}
+
+function habilitarIcmsDestinoIndicador(indicador) {
+    destinoOperacao = document.getElementById('id_dest').value;
+    if(indicador === '9' && destinoOperacao === '2') {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
+    } else {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
+    }
+}
+
+function habilitarIcmsDestino(destinoOperacao) {
+    if(destinoOperacao === '2') {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
+    } else {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
+    }
+}
+
 function habilitarDesabilitarDevolucao(tpNf) {
     if(tpNf === '1') {
         $$('[id^="p_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
@@ -725,6 +762,41 @@ function atualizarValorTotalNota() {
         valorTotalNota += parseFloat(document.getElementById('v_ipi').value);
     }
     $('v_nf').value = parseFloat(valorTotalNota).toFixed(4);
+}
+
+function atualizarValorTotalIcmsDestino(elementId) {
+    var vFcpUfDestTotal = 0;
+    var vIcmsUfDestTotal = 0;
+    var vIcmsUfRemetTotal = 0;
+    var produtosItensTotal = document.querySelectorAll('input[id^="produto"]');
+    for(i = 0; i < produtosItensTotal.length; i++) {
+        var vFcpUfDest = document.getElementById('v_fcp_uf_dest'+[i]+'value').value;
+        var vIcmsUfDest = document.getElementById('v_icms_uf_dest'+[i]+'value').value;
+        var vIcmsUfRemet = document.getElementById('v_icms_uf_remet'+[i]+'value').value;
+        
+        if(vFcpUfDest === '') {
+            vFcpUfDest = 0;
+        }
+        vFcpUfDestTotal += parseFloat(vFcpUfDest);
+        if(vIcmsUfDest === '') {
+            vIcmsUfDest = 0;
+        }
+        vIcmsUfDestTotal += parseFloat(vIcmsUfDest);
+        if(vIcmsUfRemet === '') {
+            vIcmsUfRemet = 0;
+        }
+        vIcmsUfRemetTotal += parseFloat(vIcmsUfRemet);
+    }
+    
+    if(elementId.indexOf('v_fcp_uf_dest') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('operacao') > -1) {
+        $('v_fcp_uf_dest').value = parseFloat(vFcpUfDestTotal).toFixed(4);
+    }
+    if(elementId.indexOf('v_icms_uf_dest') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('operacao') > -1) {
+        $('v_icms_uf_dest').value = parseFloat(vIcmsUfDestTotal).toFixed(4);
+    }
+    if(elementId.indexOf('v_icms_uf_remet') > -1 || elementId.indexOf('remover') > -1 || elementId.indexOf('operacao') > -1) {
+        $('v_icms_uf_remet').value = parseFloat(vIcmsUfRemetTotal).toFixed(4);
+    }
 }
 
 function formatarValores(elementosMonetarios) {

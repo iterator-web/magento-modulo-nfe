@@ -198,7 +198,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $model->setCDv($cDV);
                     $model->setTpAmb($tpAmb);
                     $model->setProcEmi('0');
-                    $model->setVerProc('1.0.0');
+                    $model->setVerProc('ITERATOR_NFE_1.2_MG');
                 }
                 $model->setDhEmi($dhEmi);
                 $model->setDhSaiEnt($dhSaiEnt);
@@ -764,6 +764,26 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         } else if($itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cst'] == '' || $itensArray['option_'.$i]['operacao'] == '1' && $itensArray['option_'.$i]['cso_sn'] == '') {
                             $erro = true;
                             $msgErro = utf8_encode('Um ou mais itens desta NF-e não possuem CST/CSOSN e portanto está NF-e não é válida.');
+                        }
+                        if($model->getIdDest() == '2' && $nfeIdentificacaoDestinatario->getIndIeDest() == '9') {
+                            $nfeProduto->setTemIcmsDestino('1');
+                            $nfeProdutoImposto = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                                    ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                                    ->addFieldToFilter('tipo_imposto', array('icms_destino'))
+                                    ->getFirstItem();
+                            $nfeProdutoImposto->setProdutoId($produtoId);
+                            $nfeProdutoImposto->setTipoImposto('icms_destino');
+                            $nfeProdutoImposto->setVBcUfDest($itensArray['option_'.$i]['v_bc_uf_dest']);
+                            $nfeProdutoImposto->setPFcpUfDest($itensArray['option_'.$i]['p_fcp_uf_dest']);
+                            $nfeProdutoImposto->setPIcmsUfDest($itensArray['option_'.$i]['p_icms_uf_dest']);
+                            $nfeProdutoImposto->setPIcmsInter($itensArray['option_'.$i]['p_icms_inter']);
+                            $nfeProdutoImposto->setPIcmsInterPart($itensArray['option_'.$i]['p_icms_inter_part']);
+                            $nfeProdutoImposto->setVFcpUfDest($itensArray['option_'.$i]['v_fcp_uf_dest']);
+                            $nfeProdutoImposto->setVIcmsUfDest($itensArray['option_'.$i]['v_icms_uf_dest']);
+                            $nfeProdutoImposto->setVIcmsUfRemet($itensArray['option_'.$i]['v_icms_uf_remet']);
+                            $nfeProdutoImposto->save();
+                        } else {
+                            $nfeProduto->setTemIcmsDestino(null);
                         }
                         if($itensArray['option_'.$i]['pis_cst'] != '') {
                             $nfeProduto->setTemPis('1');

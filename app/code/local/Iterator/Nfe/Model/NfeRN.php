@@ -43,6 +43,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $vPis = null;
         $vCofins = null;
         $vCredICMSSN = null;
+        $vFCPUFDest = null;
+        $vICMSUFDest = null;
+        $vICMSUFRemet = null;
         $totalVProd = null;
         $totalVFrete = null;
         $totalVSeg = null;
@@ -153,7 +156,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfe->setIndFinal('1');
         $nfe->setIndPres('2');
         $nfe->setProcEmi('0');
-        $nfe->setVerProc('ITERATOR_NFE_1.0_MG');
+        $nfe->setVerProc('ITERATOR_NFE_1.2_MG');
         $nfe->save();
         
         $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao');
@@ -335,6 +338,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $temPis = null;
                 $temCofins = null;
                 $temIpi = null;
+                $temIcmsDestino = null;
                 $prodSt = null;
                 $prodIpi = null;
                 $aliquotaIbpt = null;
@@ -396,7 +400,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 }
                 if($existeMotorImpostos && $ncm && $origem != null && $cfop) {
                     $motorCalculos = Mage::getModel('motorimpostos/motorcalculos');
-                    $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem);
+                    $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem, $nfeIdentificacaoDestinatario->getIndIeDest());
                     if($dadosNcm) {
                         $orig = $dadosNcm->getIcmsOrigem();
                         $cstCsosn = $dadosNcm->getIcmsCst();
@@ -481,6 +485,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     $temPis = '1';
                     $temCofins = '1';
                     $temIpi = '1';
+                    if($nfe->getIdDest() == '2' && $nfeIdentificacaoDestinatario->getIndIeDest() == '9') {
+                        $temIcmsDestino = '1';
+                    }
                     $totalVTotTrib += $vTotTrib;
                     $itemComNcm++;
                 }
@@ -490,10 +497,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $nfeProduto->setTemPis($temPis);
                 $nfeProduto->setTemCofins($temCofins);
                 $nfeProduto->setTemIpi($temIpi);
+                $nfeProduto->setTemIcmsDestino($temIcmsDestino);
                 $nfeProduto->save();
                 
                 if($existeMotorImpostos && $existeDadosNcm) {
-                    $impostosRetorno = $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId(), $estadoDestinatario->getRegionId());
+                    $impostosRetorno = $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId(), $estadoDestinatario->getRegionId(), $temIcmsDestino);
                     if($impostosRetorno['vBC'] > 0) {
                         $vBC += $impostosRetorno['vBC'];
                     }
@@ -513,6 +521,15 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                     }
                     if($impostosRetorno['vCredICMSSN'] > 0) {
                         $vCredICMSSN += $impostosRetorno['vCredICMSSN'];
+                    }
+                    if($impostosRetorno['vFCPUFDest'] > 0) {
+                        $vFCPUFDest += $impostosRetorno['vFCPUFDest'];
+                    }
+                    if($impostosRetorno['vICMSUFDest'] > 0) {
+                        $vICMSUFDest += $impostosRetorno['vICMSUFDest'];
+                    }
+                    if($impostosRetorno['vICMSUFRemet'] > 0) {
+                        $vICMSUFRemet += $impostosRetorno['vICMSUFRemet'];
                     }
                     //$vPis = '';
                     //$vCofins = '';
@@ -547,6 +564,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         }
         $nfe->setVBc($vBC);
         $nfe->setVIcms($vICMS);
+        $nfe->setVFcpUfDest($vFCPUFDest);
+        $nfe->setVIcmsUfDest($vICMSUFDest);
+        $nfe->setVIcmsUfRemet($vICMSUFRemet);
         $nfe->setVBcSt($vBCST);
         $nfe->setVSt($vST);
         $nfe->setVProd($totalVProd);
@@ -1251,6 +1271,23 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 //$resp = $nfe->tagICMSST($nItem, $orig, $cst, $vBCSTRet, $vICMSSTRet, $vBCSTDest, $vICMSSTDest);
             }
             
+            // Produto ICMS UF Destino
+            if($nfeProduto->getTemIcmsDestino() == '1') {
+                $nfeProdutoImpostoIcmsDestino = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
+                        ->addFieldToFilter('produto_id', array('eq' => $produtoId))
+                        ->addFieldToFilter('tipo_imposto', array('icms_destino'))
+                        ->getFirstItem();
+                $vBCUFDest = $nfeProdutoImpostoIcmsDestino->getVBcUfDest();
+                $pFCPUFDest = $nfeProdutoImpostoIcmsDestino->getPFcpUfDest();
+                $pICMSUFDest = $nfeProdutoImpostoIcmsDestino->getPIcmsUfDest();
+                $pICMSInter = $nfeProdutoImpostoIcmsDestino->getPIcmsInter();
+                $pICMSInterPart = $nfeProdutoImpostoIcmsDestino->getPIcmsInterPart();
+                $vFCPUFDest = $nfeProdutoImpostoIcmsDestino->getVFcpUfDest();
+                $vICMSUFDest = $nfeProdutoImpostoIcmsDestino->getVIcmsUfDest();
+                $vICMSUFRemet = $nfeProdutoImpostoIcmsDestino->getVIcmsUfRemet();
+                $resposta = $nfeCriarXML->tagICMSUFDest($nItem, $vBCUFDest, $pFCPUFDest, $pICMSUFDest, $pICMSInter, $pICMSInterPart, $vFCPUFDest, $vICMSUFDest, $vICMSUFRemet);
+            }
+            
             // Produto PIS
             if($nfeProduto->getTemPis() == '1') {
                 $nfeProdutoImpostoPis = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()
@@ -1376,6 +1413,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $vBCTot = $nfe->getVBc(); 
         $vICMSTot = $nfe->getVIcms(); 
         $vICMSDesonTot = $nfe->getVIcmsDeson(); 
+        $vFcpUfDestTot = $nfe->getVFcpUfDest();
+        $vICMSUfDestTot = $nfe->getVIcmsUfDest();
+        $vICMSUfRemetTot = $nfe->getVIcmsUfRemet();
         $vBCSTTot = $nfe->getVBcSt(); 
         $vSTTot = $nfe->getVSt(); 
         $vProdTot = $nfe->getVProd(); 
@@ -1389,7 +1429,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $vOutroTot = $nfe->getVOutro(); 
         $vNFTot = $nfe->getVNf();
         $vTotTribTot = $nfe->getVTotTrib();
-        $resposta = $nfeCriarXML->tagICMSTot($vBCTot, $vICMSTot, $vICMSDesonTot, $vBCSTTot, $vSTTot, $vProdTot, $vFreteTot, $vSegTot, $vDescTot, $vIITot, $vIPITot, $vPISTot, $vCOFINSTot, $vOutroTot, $vNFTot, $vTotTribTot);
+        $resposta = $nfeCriarXML->tagICMSTot($vBCTot, $vICMSTot, $vICMSDesonTot, $vFcpUfDestTot, $vICMSUfDestTot, $vICMSUfRemetTot, $vBCSTTot, $vSTTot, $vProdTot, $vFreteTot, $vSegTot, $vDescTot, $vIITot, $vIPITot, $vPISTot, $vCOFINSTot, $vOutroTot, $vNFTot, $vTotTribTot);
         
         //ISSQNTot
         $vServIss = $nfe->getVServ(); 
