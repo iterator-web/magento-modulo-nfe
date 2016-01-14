@@ -1438,7 +1438,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
                         $xsdFile = $nome."_v".$ver.".xsd";
                         break;
                 }
-                $schemeVersion = 'PL_008h1';
+                $schemeVersion = 'PL_008h2';
                 $diretorio = Mage::getBaseDir(). DS . 'nfe' . DS . 'schemes' . DS . $schemeVersion . DS;
                 $aFile = $diretorio.$xsdFile;
                 if (empty($aFile) || empty($aFile[0])) {
