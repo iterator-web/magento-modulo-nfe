@@ -88,6 +88,17 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Enviar_Edit_Form extends Mage_Adminhtml_B
             'required'  => true,
         ));
         
+        $fieldset->addField('ano', 'select', array(
+            'name'      => 'ano',
+            'label'     => 'Ano',
+            'title'     => 'Ano',
+            'values'    => array(
+               array('value' => date('Y'), 'label' => date('Y')),
+               array('value' => date('Y')-1, 'label' => date('Y')-1),
+            ),
+            'required'  => true,
+        ));
+        
         $fieldset->addField('email', 'text', array(
             'name'      => 'email',
             'label'     => utf8_encode('E-Mail Destinatário'),

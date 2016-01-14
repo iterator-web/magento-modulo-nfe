@@ -1132,7 +1132,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 $diaInicial = '01';
                 $diaFinal = '31';
                 $mes = $postData['mes'];
-                $ano = date('Y');
+                $ano = $postData['ano'];
                 $nfeCollection = Mage::getModel('nfe/nfe')->getCollection();
                 $nfeCollection->addFieldToFilter('dh_recbto', array('date' => true, 'from' => $ano.$mes.$diaInicial.' 00:00:00'));
                 $nfeCollection->addFieldToFilter('dh_recbto', array('date' => true, 'to' => $ano.$mes.$diaFinal.' 23:59:59'));
@@ -1153,7 +1153,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 }
                 $arquivoZip = Mage::getBaseDir(). DS . 'nfe' . DS . 'zip' . DS . 'NFeMes' . '.zip';
                 $this->createZipFile($arquivosXml, $arquivoZip, true);
-                $this->sendMailAttachedZip($arquivoZip, $postData['mes'], $postData['email']);
+                $this->sendMailAttachedZip($arquivoZip, $postData['mes'], $postData['ano'], $postData['email']);
                 Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('O e-mail com as NF-e do Mês foi enviado com sucesso para o seguinte destinatário: '.$postData['email'])));
                 $this->_redirect('*/*/');
                 return;
@@ -1582,12 +1582,12 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
 	}
     }
     
-    private function sendMailAttachedZip($arquivoZip, $mes, $destinatario) {
+    private function sendMailAttachedZip($arquivoZip, $mes, $ano, $destinatario) {
         $mailTemplate = Mage::getModel('core/email_template');
         $mailTemplate->setSenderName(Mage::getStoreConfig('trans_email/ident_general/name'));
         $mailTemplate->setSenderEmail(Mage::getStoreConfig('trans_email/ident_general/email'));
         $mailTemplate->setTemplateSubject(utf8_encode('Notas Fiscais Eletrônicas da empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao')));
-        $mailTemplate->setTemplateText(utf8_encode('Olá, <br/><br/>Segue em anexo arquivo compactado contendo as <b>Notas Fiscais Eletrônicas (NF-e)</b> emitidas pela empresa <b>'.Mage::getStoreConfig('nfe/emitente_opcoes/razao').'</b> no Mês '.$mes.' do ano vigente.<br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
+        $mailTemplate->setTemplateText(utf8_encode('Olá, <br/><br/>Segue em anexo arquivo compactado contendo as <b>Notas Fiscais Eletrônicas (NF-e)</b> emitidas pela empresa <b>'.Mage::getStoreConfig('nfe/emitente_opcoes/razao').'</b> no Mês '.$mes.' do ano de '.$ano.'.<br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
         $mailTemplate->getMail()->createAttachment(file_get_contents($arquivoZip), Zend_Mime::TYPE_OCTETSTREAM, Zend_Mime::DISPOSITION_ATTACHMENT, Zend_Mime::ENCODING_BASE64, 'NFeMes.zip');
         $mailTemplate->send($destinatario, $destinatario);
         
@@ -1596,7 +1596,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $mailTemplateAdmin->setSenderName(Mage::getStoreConfig('trans_email/ident_general/name'));
         $mailTemplateAdmin->setSenderEmail(Mage::getStoreConfig('trans_email/ident_general/email'));
         $mailTemplateAdmin->setTemplateSubject(utf8_encode('Envio de Notas Fiscais Eletrônicas da empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao')));
-        $mailTemplateAdmin->setTemplateText(utf8_encode('Olá, <br/><br/>O usuário administrativo <b>'.$user->getUser()->getUsername().'</b> pertencente ao ID <b>'.$user->getUser()->getUserId().'</b> fez o envio de Notas Fiscais Eletrônicas (NF-e) emitidas pela empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao').' no Mês '.$mes.' do ano vigente, para o desinatário com o seguinte endereço de e-mail: <b>'.$destinatario.'</b><br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
+        $mailTemplateAdmin->setTemplateText(utf8_encode('Olá, <br/><br/>O usuário administrativo <b>'.$user->getUser()->getUsername().'</b> pertencente ao ID <b>'.$user->getUser()->getUserId().'</b> fez o envio de Notas Fiscais Eletrônicas (NF-e) emitidas pela empresa '.Mage::getStoreConfig('nfe/emitente_opcoes/razao').' no Mês '.$mes.' do ano  de '.$ano.', para o desinatário com o seguinte endereço de e-mail: <b>'.$destinatario.'</b><br/><br/>Esta é uma mensagem automática. <br/>Por favor não responda este e-mail,<br/>Obrigado.'));
         $mailTemplateAdmin->send(Mage::getStoreConfig('trans_email/ident_general/email'), Mage::getStoreConfig('trans_email/ident_general/email'));
     }
 }
