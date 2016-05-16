@@ -68,6 +68,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
      
     protected function _prepareCollection() {
         $collection = Mage::getResourceModel($this->_getCollectionClass());
+        $collection->getSelect()->joinLeft(array('identificacao' => $collection->getTable('nfe/nfeidentificacao')), 'main_table.nfe_id = identificacao.nfe_id and identificacao.tipo_identificacao = "dest"', array('identificacao_dest_uf' => 'identificacao.uf'));
         $this->setCollection($collection);
          
         return parent::_prepareCollection();
@@ -91,6 +92,16 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
                 'index' => 'pedido_increment_id',
                 'width' => '100px',
                 'filter_index' => 'pedido_increment_id'
+            )
+        );
+        
+        $this->addColumn('identificacao_dest_uf',
+            array(
+                'header'=> 'UF Destino',
+                'index' => 'identificacao_dest_uf',
+                'width' => '50px',
+                'align'     =>'center',
+                'filter_index' => 'identificacao.uf'
             )
         );
         
