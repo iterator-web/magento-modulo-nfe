@@ -123,6 +123,15 @@
 /lib/fpdf/tutorial/tuto6.php /lib/fpdf/tutorial/tuto6.php
 /lib/fpdf/tutorial/tuto7.htm /lib/fpdf/tutorial/tuto7.htm
 /lib/fpdf/tutorial/tuto7.php /lib/fpdf/tutorial/tuto7.php
+/lib/fpdi/filters/FilterASCII85.php /lib/fpdi/filters/FilterASCII85.php
+/lib/fpdi/filters/FilterASCIIHexDecode.php /lib/fpdi/filters/FilterASCIIHexDecode.php
+/lib/fpdi/filters/FilterLZW.php /lib/fpdi/filters/FilterLZW.php
+/lib/fpdi/fpdf_tpl.php /lib/fpdi/fpdf_tpl.php
+/lib/fpdi/fpdi.php /lib/fpdi/fpdi.php
+/lib/fpdi/fpdi_bridge.php /lib/fpdi/fpdi_bridge.php
+/lib/fpdi/fpdi_pdf_parser.php /lib/fpdi/fpdi_pdf_parser.php
+/lib/fpdi/pdf_context.php /lib/fpdi/pdf_context.php
+/lib/fpdi/pdf_parser.php /lib/fpdi/pdf_parser.php
 /skin/adminhtml/default/default/css/iterator/stereotabs.css /skin/adminhtml/default/default/css/iterator/stereotabs.css
 /skin/adminhtml/default/default/images/iterator/report/logo.png /skin/adminhtml/default/default/images/iterator/report/logo.png
 /skin/adminhtml/default/default/images/iterator/window/bottom_left.png /skin/adminhtml/default/default/images/iterator/window/bottom_left.png

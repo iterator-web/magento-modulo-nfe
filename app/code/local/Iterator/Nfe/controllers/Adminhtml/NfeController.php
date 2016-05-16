@@ -1014,7 +1014,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
     }
     
-    public function massGerarNfeAction(){
+    public function massGerarNfeAction() {
         $orderIds = $this->getRequest()->getPost('order_ids', array());
         $countNfeOrder = 0;
         $countNonNfeOrder = 0;
@@ -1250,10 +1250,57 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
     public function imprimirAction() {
         $nfeHelper = Mage::helper('nfe/nfeHelper');
         $nfeId = $this->getRequest()->getParam('nfe_id');
-        $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
-        $xmlNfe = $nfeHelper->getXmlNfe($nfe);
-        $sXml = $nfeHelper->xmlString($xmlNfe);
-        $nfeHelper->gerarDanfe($sXml, $nfe, 'I');
+        $nfeIds = $this->getRequest()->getParam('nfe_ids');
+        if($nfeId) {
+            $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+            $xmlNfe = $nfeHelper->getXmlNfe($nfe);
+            $sXml = $nfeHelper->xmlString($xmlNfe);
+            $nfeHelper->gerarDanfe($sXml, $nfe, 'I');
+        } else if($nfeIds) {
+            $nfeArray = explode(',', $nfeIds);
+            $nfeHelper->gerarDanfes($nfeArray);
+        }
+    }
+    
+    public function massImprimirAction() {
+        $nfeIds = $this->getRequest()->getParam('nfe_id');
+        $countNfeId = 0;
+        $countNonNfeId = 0;
+        if (!is_array($nfeIds)) {
+            Mage::getSingleton('adminhtml/session')->addError(Mage::helper('nfe')->__('Por favor selecione o(s) item(s).'));
+        } else {
+            try {
+                $nfeArray = array();
+                $nfeModel = Mage::getModel('nfe/nfe');
+                foreach ($nfeIds as $nfeId) {
+                    $nfeModel->load($nfeId);
+                    if($nfeModel->getStatus() == '6' || $nfeModel->getStatus() == '7') {
+                        $nfeArray[] = $nfeId;
+                        $countNfeId++;
+                    } else {
+                        $countNonNfeId++;
+                    }
+                }
+                if ($countNonNfeId) {
+                    if ($countNfeId) {
+                        //$this->_getSession()->addError($this->__('%s NF-e(s) n&atilde;o impressa(s).', $countNonNfeId));
+                    } else {
+                        $this->_getSession()->addError($this->__('NF-e(s) n&atilde;o impressa(s).'));
+                    }
+                }
+                if ($countNfeId) {
+                    //$this->_getSession()->addSuccess($this->__('%s NF-e(s) impressa(s) com sucesso.', $countNfeId));
+                }
+            } catch (Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            }
+        }
+        if($nfeArray) {
+            $nfeIdsVirgulas = implode(',', $nfeArray);
+            $this->_redirect('*/nfe/imprimir', array('nfe_ids'=>$nfeIdsVirgulas));
+        } else {
+            $this->_redirect('*/*/');
+        }
     }
     
     public function ReportAction() {

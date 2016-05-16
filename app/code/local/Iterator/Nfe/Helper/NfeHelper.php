@@ -2425,6 +2425,22 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfeDanfe->printDANFE($pdf, $acao);
     }
     
+    public function gerarDanfes($nfeIds) {
+        $arquivos = array();
+        foreach($nfeIds as $nfeId) {
+            $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
+            if($nfe->getTpNf() == '0') {
+                $tipo = 'entrada';
+            } else {
+                $tipo = 'saida';
+            }
+            $arquivos[] = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . $tipo . DS . $nfe->getIdTag().'.pdf';
+        }
+        $agruparDanfe = Mage::helper('nfe/pdf_AgruparDanfe');
+        $agruparDanfe->setFiles($arquivos); 
+        $agruparDanfe->concatPrint(); 
+    }
+    
     public function enviarEmail($nfe) {
         $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
         if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {

@@ -207,6 +207,16 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
          
         return parent::_prepareColumns();
     }
+    
+    protected function _prepareMassaction() {
+        $this->setMassactionIdField('nfe_id');
+        $this->getMassactionBlock()->setFormFieldName('nfe_id');
+        $this->getMassactionBlock()->addItem('imprimir', array(
+            'label'=> Mage::helper('nfe')->__('Imprimir'),
+            'url'  => $this->getUrl('*/*/massImprimir', array('' => ''))
+        ));
+        return $this;
+    }
 }
 
 ?>
