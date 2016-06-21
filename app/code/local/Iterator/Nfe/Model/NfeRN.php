@@ -342,6 +342,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $prodSt = null;
                 $prodIpi = null;
                 $aliquotaIbpt = null;
+                $tipoBrinde = null;
                 $presente = false;
                 $nfeProduto = Mage::getModel('nfe/nfeproduto');
                 $nItem++;
@@ -351,7 +352,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $st = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('st');
                 $unidade = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('unidade');
                 $tipoMercadoria = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_mercadoria');
-                $tipoBrinde = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_brinde');
+                if(Mage::getResourceModel('catalog/eav_attribute')->loadByCode('catalog_product', 'tipo_brinde')->getId()) {
+                    $tipoBrinde = Mage::getModel('catalog/product')->load($item->getProductId())->getAttributeText('tipo_brinde');
+                }
                 if($tipoBrinde == 'Amostra' && $item->getPrice() == '0.000' || $tipoBrinde == 'Brinde' && $item->getPrice() == '0.000') {
                     $presente = true;
                     if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
