@@ -1,0 +1,126 @@
+<?php
+ /**
+ * Iterator Sistemas Web
+ *
+ * NOTAS SOBRE LICENÇA
+ *
+ * Este arquivo de código-fonte está em vigência dentro dos termos da EULA.
+ * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
+ * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
+ * propostos pela empresa Iterator Sistemas Web.
+ *
+ * =================================================================
+ *                     MÓDULO DE INTEGRAÇÃO NF-E                          
+ * =================================================================
+ * Este produto foi desenvolvido para integrar o Ecommerce Magento
+ * ao Sistema da SEFAZ para geração de Nota Fiscal Eletrônica(NF-e).
+ * Através deste módulo a loja virtual do contratante do serviço
+ * passará a gerar o XML da NF-e, validar e assinar digitalmente em
+ * ambiente da própria loja virtual. Também terá a possibilidade de 
+ * fazer outros processos diretos com o SEFAZ como cancelamentos de
+ * NF-e, consultas e inutilizações de numeração. O módulo faz ainda
+ * o processo de geração da DANFE e envio automático de e-mail ao
+ * cliente com as informações e arquivos relacionados a sua NF-e.
+ * Por fim o módulo disponibiliza também a NF-e de entrada que será
+ * gerada no momento da devolução de pedidos por parte dos clientes.
+ * =================================================================
+ *
+ * @category   Iterator
+ * @package    Iterator_Nfe
+ * @author     Ricardo Auler Barrientos <contato@iterator.com.br>
+ * @copyright  Copyright (c) Iterator Sistemas Web - CNPJ: 19.717.703/0001-63
+ * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
+ */
+
+$_htmlId      = $this->getElement()->getHtmlId();
+$_htmlClass   = $this->getElement()->getClass();
+$_htmlName    = $this->getElement()->getName();
+$_readonly    = $this->getElement()->getReadonly();
+$nfeId = Mage::registry('nfe')->getNfeId();
+$collection = Mage::getModel('nfe/nfecobranca')->getCollection()->addFieldToFilter('nfe_id', $nfeId);
+$_counter = 0;
+?>
+
+<tr>
+    <td class="label"><?php echo $this->getElement()->getLabel() ?></td>
+    <td colspan="10" class="grid duplicata">
+        <table id="attribute-options-table-duplicata" class="dynamic-grid nfe-duplicata" cellspacing="0" cellpadding="0">
+            <thead>
+                <tr>
+                    <td colspan="3" align="center" bgcolor="#D7E5EF" style="font-weight:bold;font-size:13px; min-width:400px;"><?php echo utf8_encode('Tabela com as duplicatas utilizadas na cobrança') ?></td>
+                    <td bgcolor="#D7E5EF">
+                        <button id="add_new_option_button_duplicata" title="Add Option" type="button" class="scalable add">
+                            <span><?php echo $this->__('Adicionar Duplicata') ?></span>
+                        </button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="headings">
+                    <th style="text-align:center; width:150px;" title="<?php echo utf8_encode('Número') ?>"><?php echo utf8_encode('Número') ?></th>
+                    <th style="text-align:center; width:70px;" title="Vencimento">Vencimento</th>
+                    <th style="text-align:center; width:70px;" title="Valor">Valor</th>
+                    <th style="text-align:center; width:70px;"><?php echo utf8_encode('Ação') ?></th>
+                </tr>
+                <?php foreach ($collection as $duplicata): ?>
+                <tr class="option-row nfe-transporte-duplicatarow" id="duplicata-row-<?php echo $_counter?>">                    
+                    <td align="center"><input id="cob_n_dup<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_n_dup]" value="<?php echo $duplicata->getCob_n_dup() ?>" class="input-text required-entry" type="text"></td>
+                    <td align="center">
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_d_venc]" id="cob_d_venc<?php echo $_counter?>value" value="<?php echo date("m/d/y", strtotime($duplicata->getCob_d_venc())) ?>" title="Data de Vencimento" type="text" class="input-text" /> <img src="<?php echo $this->getSkinUrl('images/grid-cal.gif'); ?>" alt="" class="v-middle" id="cob_d_venc<?php echo $_counter?>_trig" title="Select Date" style="" />
+                        <script type="text/javascript">
+                        //<![CDATA[
+                            Calendar.setup({
+                                inputField: "cob_d_venc<?php echo $_counter?>value",
+                                ifFormat: "%d/%m/%y",
+                                showsTime: false,
+                                button: "cob_d_venc<?php echo $_counter?>_trig",
+                                align: "Bl",
+                                singleClick : true
+                            });
+                        //]]>
+                        </script>            
+                    </td>
+                    <td align="center"><input id="cob_v_dup<?php echo $_counter?>value" name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][cob_v_dup]" value="<?php echo $duplicata->getCob_v_dup() ?>" class="input-text" type="text"></td>                    
+                    <td align="center" class="" id="delete_button_container_option_<?php echo $_counter ?>'">
+                        <input name="<?php echo $_htmlName; ?>[value][option_<?php echo $_counter ?>][id]" value="<?php echo $duplicata->getId() ?>" type="hidden">
+                        <input id="delete-row-<?php echo $_counter ?>" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_<?php echo $_counter ?>]" value=""/>
+                        <button onclick="$('duplicata-row-<?php echo $_counter ?>').style.display='none'; $('delete-row-<?php echo $_counter ?>').setValue(1); $('cob_n_dup<?php echo $_counter?>value').removeClassName('required-entry'); removerCobranca(<?php echo $_counter ?>);" title="Delete" type="button" class="scalable delete delete-option">    
+                            <span>Retirar</span>
+                        </button>
+                    </td>
+                </tr>
+                <?php 
+                $_counter++;
+                endforeach;
+                ?>
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="4" align="left" style="font-style:italic;font-size:10px;"><?php echo utf8_encode('* Máximo de 120 duplicatas permitidas por cobrança na NF-e.') ?></td>
+                </tr>
+            </tfoot>
+        </table>
+    </td>
+</tr>
+<script type="text/javascript">
+//<![CDATA[
+var _form_html_row_duplicata = '<tr class="option-row nfe-transporte-duplicatarow" id="duplicata-row-{{id}}"><td align="center"><input id="cob_n_dup{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][cob_n_dup]" value="" class="input-text required-entry" type="text"></td><td align="center"><input name="<?php echo $_htmlName; ?>[value][option_{{id}}][cob_d_venc]" id="cob_d_venc{{id}}value" value="" title="Data de Vencimento" type="text" style="width:80px!important; margin-right:5px;" class="input-text" /> <img src="<?php echo $this->getSkinUrl('images/grid-cal.gif'); ?>" alt="" class="v-middle" id="cob_d_venc{{id}}_trig" title="Select Date" style="" /></td><td align="center"><input id="cob_v_dup{{id}}value" name="<?php echo $_htmlName; ?>[value][option_{{id}}][cob_v_dup]" value="" class="input-text" type="text"></td><td align="center" class="" id="delete_button_container_option_{{id}}"><input name="<?php echo $_htmlName; ?>[value][option_{{id}}][id]" value="" type="hidden"><input id="delete-row-{{id}}" type="hidden" class="delete-flag" name="<?php echo $_htmlName; ?>[delete][option_{{id}}]" value=""/><button onclick="$(\'duplicata-row-{{id}}\').style.display=\'none\'; $(\'delete-row-{{id}}\').setValue(1); $(\'cob_n_dup{{id}}value\').removeClassName(\'input-text required-entry\'); removerCobranca({{id}});" title="Delete" type="button" class="scalable delete delete-option"><span>Retirar</span></button></td></tr>';
+var _nfetransporte_counter_duplicata = <?php echo $_counter?>;
+$('add_new_option_button_duplicata').observe('click', function(){
+    $('attribute-options-table-duplicata').insert(_form_html_row_duplicata.replace(/\{\{id\}\}/ig, _nfetransporte_counter_duplicata));
+    calendario(_nfetransporte_counter_duplicata);
+    _nfetransporte_counter_duplicata++;
+});
+
+function calendario(ident) {
+    Calendar.setup({
+        inputField: "cob_d_venc"+ident+"value",
+        ifFormat: "%d/%m/%y",
+        showsTime: false,
+        button: "cob_d_venc"+ident+"_trig",
+        align: "Bl",
+        singleClick : true
+    });
+}
+//]]>
+</script>
