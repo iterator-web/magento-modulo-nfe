@@ -262,7 +262,11 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $ieDestinatario = $cliente->getIe();
             } else {
                 $razaoSocialDestinatario = $order->getCustomerFirstname();
-                $ieDestinatario = $order->getBillingAddress()->getIe();
+                if($order->getCustomerNote()) {
+                    $ieDestinatario = eregi_replace ("[^0-9]", "", $order->getCustomerNote());
+                } else {
+                    $ieDestinatario = eregi_replace ("[^0-9]", "", $order->getBillingAddress()->getIe());
+                }
             }
             $nfeIdentificacaoDestinatario->setXNome($razaoSocialDestinatario);
             if($ieDestinatario && strtolower($ieDestinatario) != 'isento') {
