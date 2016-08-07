@@ -1014,6 +1014,80 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         }
     }
     
+    public function corrigirAction() {
+        $nfeId  = $this->getRequest()->getParam('nfe_id');
+        $modelNfe = Mage::getModel('nfe/nfe');
+        $model = Mage::getModel('nfe/nfecce');
+        
+        if($nfeId) {
+            $modelNfe = $modelNfe->load($nfeId);
+            $model = Mage::getModel('nfe/nfecce')->getCollection()
+                ->addFieldToFilter('nfe_id', $modelNfe->getNfeId())->getFirstItem();
+            if(!$model->getId()) {
+                $model->setNfeId($nfeId);
+            }
+            if(!$modelNfe->getId()) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__(utf8_encode('Esta NF-e já não existe mais.')));
+                $this->_redirect('*/*/');
+                return;
+            }
+        }
+        $nSeqEvento = $model->getNSeqEvento();
+        if(!$nSeqEvento) {
+            $model->setNSeqEvento(1);
+        } else {
+            $model->setNSeqEvento($nSeqEvento+1);
+        }
+        
+        $this->_title($model->getId() ? $model->getNSeqEvento() : $this->__('Nova CC-e'));
+
+        $data = Mage::getSingleton('adminhtml/session')->getCceData(true);
+        if (!empty($data)) {
+            $model->setData($data);
+        }
+        Mage::register('nfe/nfecce', $model);
+        
+        $this->_initAction()
+            ->_addBreadcrumb($nfeId ? $this->__('Editar CC-e') : $this->__('Nova CC-e'), $model->getId() ? $this->__('Editar CC-e') : $this->__('Nova CC-e'))
+            ->_addContent($this->getLayout()->createBlock('nfe/adminhtml_nfe_cce')->setData('action', $this->getUrl('*/*/saveCorrigir')))
+            ->renderLayout();
+    }
+    
+    public function saveCorrigirAction() {
+        $postData = $this->getRequest()->getPost();
+        if ($postData) {
+            $model = Mage::getSingleton('nfe/nfecce');
+            $model->setData($postData);
+            try {
+                $model->save();
+                $nfe = Mage::getModel('nfe/nfe');
+                $nfe->load($model->getNfeId());
+                $nfeHelper = Mage::helper('nfe/nfeHelper');
+                $estadoEmitente = Mage::getModel('directory/region')->load(Mage::getStoreConfig('nfe/emitente_opcoes/region_id'));
+                $aRetorno = array();
+                $xmlCorrigido = $nfeHelper->envCCe(substr($nfe->getIdTag(),3), $model->getXCorrecao(), $model->getNSeqEvento(), $nfe->getTpAmb(), $aRetorno, $estadoEmitente->getCode(), $nfe->getCUf(), preg_replace('/[^\d]/', '', Mage::getStoreConfig('nfe/emitente_opcoes/cnpj')));
+                if($xmlCorrigido['retorno'] == 'sucesso') {
+                    Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('CC-e da NF-e foi salva com sucesso.')));
+                    $nfeHelper->salvarXmlCorrigido($xmlCorrigido['xml'], $nfe);
+                    $nfeHelper->gerarDacce($xmlCorrigido['xml'], $nfe, 'F');
+                    $nfeHelper->setCorrigido($nfe);
+                } else {
+                    Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era corrigida.'));
+                    $nfe->setMensagem(utf8_encode('Houve erro na correção da NF-e. Erro: '.utf8_decode($xmlCorrigido['retorno'])));
+                    $nfe->save();
+                }
+                $this->_redirect('*/*/');
+                return;
+            } catch (Mage_Core_Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($e->getMessage());
+            } catch (Exception $e) {
+                Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto a CC-e da NF-e era salva.'));
+            }
+            Mage::getSingleton('adminhtml/session')->setCceData($postData);
+            $this->_redirectReferer();
+        }
+    }
+    
     public function massGerarNfeAction() {
         $orderIds = $this->getRequest()->getPost('order_ids', array());
         $countNfeOrder = 0;
@@ -1427,6 +1501,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $nfeId = $this->getRequest()->getParam('nfe_id');
         $nfe = Mage::getModel('nfe/nfe')->load($nfeId);
         $nfeProdutosCollection = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeId));
+        $nfeCce = Mage::getModel('nfe/nfecce')->getCollection()->addFieldToFilter('nfe_id', $nfeId)->getFirstItem();
         $html .= '<ul style="border:1px solid #333; width:793px; margin:0 auto; padding:0 0 10px;">';
         $html .= '<li style="background:#ccc; text-align:center; margin-bottom:5px;"><strong>Chave de Acesso: </strong>#'.$nfe->getIdTag().'</li>';
         $html .= utf8_encode('
@@ -1519,16 +1594,24 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
         $html .= '</div>';
         if($nfe->getStatus() == '6' || $nfe->getStatus() == '7') {
             $nfeHelper = Mage::helper('nfe/nfeHelper');
-            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, false);
+            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, '');
             $html .= '<div style="margin:20px 0 60px 0;">';
             $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['pdf_url'].'\');"><span>Download da DANFE</span></button>');
-            $html .= utf8_encode('<button style="float:right; margin-right:10px;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');
+            $html .= utf8_encode('<button style="float:right; margin-right:10px;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML da NF-e</span></button>');
             $html .= '</div>';
         } else if($nfe->getStatus() == '9') {
             $nfeHelper = Mage::helper('nfe/nfeHelper');
-            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, true);
+            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, 'inutilizado');
             $html .= '<div style="margin:20px 0 60px 0;">';
-            $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML</span></button>');
+            $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML da NF-e</span></button>');
+            $html .= '</div>';
+        }
+        if($nfeCce->getCceId()) {
+            $nfeHelper = Mage::helper('nfe/nfeHelper');
+            $downloadsDetalhes = $nfeHelper->getDownloads($nfe, 'corrigido');
+            $html .= '<div style="margin:20px 0 60px 0;">';
+            $html .= utf8_encode('<button style="float:right;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['pdf_url'].'\');"><span>Download da DACCE</span></button>');
+            $html .= utf8_encode('<button style="float:right; margin-right:10px;" type="button" class="go" onclick="javascript:window.location.replace(\''.$downloadsDetalhes['xml_url'].'\');"><span>Download do XML da CC-e</span></button>');
             $html .= '</div>';
         }
         

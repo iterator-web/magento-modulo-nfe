@@ -2,7 +2,7 @@
 <config>
     <modules>
         <Iterator_Nfe>
-            <version>1.0.2</version>
+            <version>1.0.3</version>
         </Iterator_Nfe>
     </modules>
     
@@ -92,6 +92,9 @@
                     <nfetransporte>
                         <table>iterator_nfe_transporte</table>
                     </nfetransporte>
+                    <nfecce>
+                        <table>iterator_nfe_cce</table>
+                    </nfecce>
                 </entities>
             </nfe_mysql4>
         </models>
