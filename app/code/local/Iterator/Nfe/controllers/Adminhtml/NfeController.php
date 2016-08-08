@@ -1217,6 +1217,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                         $tipo = 'saida';
                     }
                     $arquivosXml[] = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . $tipo . DS . $nfe->getIdTag() . '.xml';
+                    $nfeCce = Mage::getModel('nfe/nfecce')->getCollection()->addFieldToFilter('nfe_id', $nfe->getNfeId())->getFirstItem();
                     if($nfeCce->getCceId()) {
                         $arquivosXml[] = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . 'corrigido' . DS . str_replace('NF', 'CC', $nfe->getIdTag()) . '.xml';
                     }
