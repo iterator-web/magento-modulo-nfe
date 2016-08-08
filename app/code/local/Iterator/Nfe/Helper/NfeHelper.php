@@ -2769,7 +2769,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
             $formato = 'L';
         }
         $logo = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
-        $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . 'corrigido' . DS . $nfe->getIdTag().'.pdf';
+        $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . 'corrigido' . DS . str_replace('NF', 'CC', $nfe->getIdTag()).'.pdf';
         $nfeDacce = Mage::helper('nfe/pdf_nfeDacce');
         $nfeDacce->init($xmlNfe, $formato, 'A4', $logo, 'I', $aEnd, '');
         $nfeDacce->printDACCE($pdf, $acao);
@@ -2938,7 +2938,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $doc->preservWhiteSpace = false; //elimina espaços em branco
         $doc->formatOutput = false;
         $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
-        $doc->save($caminho.$nfe->getIdTag().'.xml');
+        $doc->save($caminho.str_replace('NF', 'CC', $nfe->getIdTag()).'.xml');
     }
     
     /**
