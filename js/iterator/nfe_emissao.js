@@ -100,6 +100,7 @@ function respondToChange(event) {
     }
     if(elementId === 'destinatario_tipo_pessoa') {
         habilitarCamposTipoPessoa('destinatario_', document.getElementById(''+elementId+'').value);
+        habilitarIcmsDestinoTipoPessoa(document.getElementById(''+elementId+'').value);
     }
     if(elementId === 'entrega_tipo_pessoa') {
         habilitarCamposTipoPessoa('entrega_', document.getElementById(''+elementId+'').value);
@@ -533,7 +534,8 @@ function exibirExportacao(processo) {
 
 function habilitarIcmsDestinoOperacao(destinoOperacao) {
     indicador = document.getElementById('destinatario_ind_ie_dest').value;
-    if(destinoOperacao === '2' && indicador === '9') {
+    tipoPessoa = document.getElementById('destinatario_tipo_pessoa').value;
+    if(destinoOperacao === '2' && tipoPessoa === '2' && indicador === '9' || destinoOperacao === '2' && tipoPessoa === '1') {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
     } else {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
@@ -542,7 +544,16 @@ function habilitarIcmsDestinoOperacao(destinoOperacao) {
 
 function habilitarIcmsDestinoIndicador(indicador) {
     destinoOperacao = document.getElementById('id_dest').value;
+    tipoPessoa = document.getElementById('destinatario_tipo_pessoa').value;
     if(indicador === '9' && destinoOperacao === '2') {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
+    } else {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
+    }
+}
+
+function habilitarIcmsDestinoTipoPessoa(tipoPessoa) {
+    if(tipoPessoa === '1') {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
     } else {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
