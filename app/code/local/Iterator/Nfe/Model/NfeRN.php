@@ -1712,7 +1712,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $indPag = '0';
             }
         } else {
-            $indPag = '0';
+            $indPag = '2';
         }
         
         return $indPag;

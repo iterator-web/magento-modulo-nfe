@@ -136,10 +136,18 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             $model->setData($postData['nfe']);
             try {
                 $dhEmiOrginal = str_replace('/', '-', $postData['nfe']['dh_emi']);
-                $dhEmi = substr($dhEmiOrginal,0,6).'20'.substr($dhEmiOrginal,6).':00';
+                if(strlen($dhEmiOrginal) == 14) {
+                    $dhEmi = substr($dhEmiOrginal,0,6).'20'.substr($dhEmiOrginal,6).':00';
+                } else if(strlen($dhEmiOrginal) == 16) {
+                    $dhEmi = substr($dhEmiOrginal,0,6).''.substr($dhEmiOrginal,6).':00';
+                }
                 $dhEmi = $validarCampos->getHoraServidor($dhEmi);
                 $dhSaiEntOrginal = str_replace('/', '-', $postData['nfe']['dh_sai_ent']);
-                $dhSaiEnt = substr($dhSaiEntOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
+                if(strlen($dhSaiEntOrginal) == 14) {
+                    $dhSaiEnt = substr($dhSaiEntOrginal,0,6).'20'.substr($dhSaiEntOrginal,6).':00';
+                } else if(strlen($dhSaiEntOrginal) == 16) {
+                    $dhSaiEnt = substr($dhSaiEntOrginal,0,6).''.substr($dhSaiEntOrginal,6).':00';
+                }
                 $dhSaiEnt = $validarCampos->getHoraServidor($dhSaiEnt);
                 if(!$validarCampos->validaMinimoMaximo($postData['nfe']['nat_op'], 1, 60)) {
                     $erro = true;
