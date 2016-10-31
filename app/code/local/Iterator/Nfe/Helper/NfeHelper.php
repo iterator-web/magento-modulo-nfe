@@ -2780,26 +2780,31 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {
             $downloadsDetalhes = $this->getDownloads($nfe, '');
             $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
-            Mage::getModel('core/email_template')
-                ->setDesignConfig(array(
-                    'area'  => 'frontend',
-                    'store' => Mage::app()->getStore()->getStoreId()
-                ))->sendTransactional(
-                    'nfe_email_template',
-                    $sender,
-                    $order->getCustomerEmail(),
-                    null,
-                    array(
-                        'store' => Mage::app()->getStore(),
-                        'order' => $order,
-                        'nfe_chve' => substr($nfe->getIdTag(),3),
-                        'xml_url' => $downloadsDetalhes['xml_url'],
-                        'pdf_url' => $downloadsDetalhes['pdf_url'],
-                        'xml_img' => $downloadsDetalhes['xml_img'],
-                        'pdf_img' => $downloadsDetalhes['pdf_img'],
-                        'nfe_name' => utf8_encode('Nota Fiscal Eletrônica')
-                    )
-                );
+            $mail = Mage::getModel('core/email_template');
+            $mail->setDesignConfig(array(
+                'area'  => 'frontend',
+                'store' => Mage::app()->getStore()->getStoreId()
+            ));
+            $emailBcc = Mage::getStoreConfig('nfe/emitente_opcoes/email_bcc');
+            if($emailBcc) {
+                $mail->addBCC($emailBcc);
+            }
+            $mail->sendTransactional(
+                'nfe_email_template',
+                $sender,
+                $order->getCustomerEmail(),
+                null,
+                array(
+                    'store' => Mage::app()->getStore(),
+                    'order' => $order,
+                    'nfe_chve' => substr($nfe->getIdTag(),3),
+                    'xml_url' => $downloadsDetalhes['xml_url'],
+                    'pdf_url' => $downloadsDetalhes['pdf_url'],
+                    'xml_img' => $downloadsDetalhes['xml_img'],
+                    'pdf_img' => $downloadsDetalhes['pdf_img'],
+                    'nfe_name' => utf8_encode('Nota Fiscal Eletrônica')
+                )
+            );
         }
     }
     
