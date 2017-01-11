@@ -621,6 +621,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             }
             if($vICMSUFDest > 0) {
                 $infCpl .= utf8_encode('TOTAL DO ICMS INTERESTADUAL PARA A UF DO DESTINATÁRIO '.Mage::helper('core')->currency($vICMSUFDest, true, false).'.  ');
+                $infCpl .= utf8_encode('Recolhimento DIFAL suspenso pela ADI 5464 - 02/2016.  ');
             }
         }
         $infCpl .= utf8_encode('Val Aprox dos Tributos '.Mage::helper('core')->currency($totalVTotTrib, true, false).' Fonte: IBPT');
@@ -779,14 +780,31 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeReferenciado->save();
         
         $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId));
+        $nfeIdentificacaoDestinatario = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'dest'))
+                    ->getFirstItem();
+        $motorCalculos = Mage::getModel('motorimpostos/motorcalculos');
         foreach($nfeProdutos as $nfeProduto) {
             $nfeProdutoSaidaId = $nfeProduto->getProdutoId();
+            $prdutoMagentoId = preg_replace('/[^\d]/', '', $nfeProduto->getProduto());
+            $ncm = Mage::getModel('catalog/product')->load($prdutoMagentoId)->getAttributeText('ncm');
+            $origem = substr(Mage::getModel('catalog/product')->load($prdutoMagentoId)->getAttributeText('origem'),0,1);
             $nfeProduto->setProdutoId(null);
             $nfeProduto->setNfeId($nfeEntradaId);
+            $tipoMercadoria = Mage::getModel('catalog/product')->load($nfeProdutoSaidaId)->getAttributeText('tipo_mercadoria');
             if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
-                $cfop = '1202';
+                if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                    $cfop = '1202';
+                } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                    $cfop = '1201';
+                }
             } else {
-                $cfop = '2202';
+                if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                    $cfop = '2202';
+                } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                    $cfop = '2201';
+                }
             }
             $nfeProduto->setCfop($cfop);
             $nfeProduto->save();
@@ -803,9 +821,14 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             
             $nfeProdutoImpostos = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
             foreach($nfeProdutoImpostos as $nfeProdutoImposto) {
-                $nfeProdutoImposto->setImpostoId(null);
-                $nfeProdutoImposto->setProdutoId($nfeProdutoEntradaId);
-                $nfeProdutoImposto->save();
+                $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem, $nfeIdentificacaoDestinatario->getIndIeDest());
+                if($dadosNcm) {
+                    $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId(), $estadoDestinatario->getRegionId(), $nfeProduto->getTemIcmsDestino());
+                } else {
+                    $nfeProdutoImposto->setImpostoId(null);
+                    $nfeProdutoImposto->setProdutoId($nfeProdutoEntradaId);
+                    $nfeProdutoImposto->save();
+                }
             }
             
             $nfeProdutoImportExports = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));

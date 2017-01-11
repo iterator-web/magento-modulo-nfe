@@ -94,6 +94,7 @@ function respondToChange(event) {
     }
     if(elementId === 'fin_nfe') {
         exibirReferencia(document.getElementById(''+elementId+'').value);
+        habilitarDesabilitarDevolucao();
     }
     if(elementId === 'tipo_documento') {
         habilitarCamposReferencia(document.getElementById(''+elementId+'').value);
@@ -119,7 +120,7 @@ function respondToChange(event) {
     }
     if(elementId === 'tp_nf') {
         exibirImportExport(document.getElementById(''+elementId+'').value);
-        habilitarDesabilitarDevolucao(document.getElementById(''+elementId+'').value);
+        habilitarDesabilitarDevolucao();
     }
     if(elementId === 'tem_importacao') {
         if(document.getElementById(''+elementId+'').checked) {
@@ -160,7 +161,7 @@ function carregarNfe() {
     exibirRetirada(valorTemRetirada);
     exibirEntrega(valorTemEntrega);
     exibirImportExport(valorTpNf);
-    habilitarDesabilitarDevolucao(valorTpNf);
+    habilitarDesabilitarDevolucao();
     formatarValores(elementosMonetarios);
 }
 
@@ -568,13 +569,18 @@ function habilitarIcmsDestino(destinoOperacao) {
     }
 }
 
-function habilitarDesabilitarDevolucao(tpNf) {
-    if(tpNf === '1') {
+function habilitarDesabilitarDevolucao() {
+    var valorTpNf = document.getElementById('tp_nf').value;
+    var valorFinNfe = document.getElementById('fin_nfe').value;
+    if(valorTpNf === '1') {
         $$('[id^="p_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
         $$('[id^="v_ipi_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
-    } else if(tpNf === '0') {
+    } else if(valorTpNf === '0' && valorFinNfe === '4') {
         $$('[id^="p_devol"]').invoke("setStyle",{backgroundColor:"#FFF"}).invoke('enable');
         $$('[id^="v_ipi_devol"]').invoke("setStyle",{backgroundColor:"#FFF"}).invoke('enable');
+    } else if(valorTpNf === '0' && valorFinNfe !== '4') {
+        $$('[id^="p_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
+        $$('[id^="v_ipi_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
     }
 }
 

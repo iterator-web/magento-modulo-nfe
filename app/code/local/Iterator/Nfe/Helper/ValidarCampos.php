@@ -270,7 +270,7 @@ class Iterator_Nfe_Helper_ValidarCampos extends Mage_Core_Helper_Abstract {
 
     public function validaEMail($mail) { 
         if($mail !== "") {
-            if (ereg("^[-A-Za-z0-9_]+[-A-Za-z0-9_.]*[@]{1}[-A-Za-z0-9_]+[-A-Za-z0-9_.]*[.]{1}[A-Za-z]{2,5}$", $mail)) {
+            if (filter_var($mail, FILTER_VALIDATE_EMAIL)) {
                 return true;
             } else {
                 return false;
