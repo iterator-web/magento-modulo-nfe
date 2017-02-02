@@ -104,6 +104,33 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Report_Edit_Form extends Mage_Adminhtml_B
             ),
         ));
         
+        $fieldset->addField('nat_op', 'select', array(
+            'name'      => 'nat_op',
+            'label'     => utf8_encode('Natureza da Operação'),
+            'title'     => utf8_encode('Natureza da Operação'),
+            'values'    => array(
+               array('value' => '', 'label' => 'Todos'),
+               array('value' => 'Venda de Mercadoria', 'label' => 'Venda de Mercadoria'),
+               array('value' => utf8_encode('Devolução de venda'), 'label' => utf8_encode('Devolução de venda')),
+               array('value' => 'Compra de Mercadoria', 'label' => 'Compra de Mercadoria'),
+               array('value' => utf8_encode('Devolução de Compra'), 'label' => utf8_encode('Devolução de Compra')),
+               array('value' => 'Simples Remessa', 'label' => 'Simples Remessa'),
+               array('value' => 'Simples faturamento decorrente de venda para entrega futura', 'label' => 'Simples faturamento decorrente de venda para entrega futura'),
+               array('value' => 'Venda originada de encomenda para entrega futura', 'label' => 'Venda originada de encomenda para entrega futura'),
+               array('value' => 'Simples remessa de mercadoria para troca/garantia', 'label' => 'Simples remessa de mercadoria para troca/garantia'),
+               array('value' => 'Retorno de simples remessa de mercadoria para troca/garantia', 'label' => 'Retorno de simples remessa de mercadoria para troca/garantia'),
+               array('value' => utf8_encode('Amostra Grátis'), 'label' => utf8_encode('Amostra Grátis')),
+               array('value' => 'Brindes', 'label' => 'Brindes'),
+               array('value' => utf8_encode('Bonificação'), 'label' => utf8_encode('Bonificação')),
+               array('value' => utf8_encode('Doação'), 'label' => utf8_encode('Doação')),
+               array('value' => 'Presente', 'label' => 'Presente'),
+               array('value' => utf8_encode('Outras Saídas'), 'label' => utf8_encode('Outras Saídas')),
+               array('value' => 'Compra de ativo imobilizado', 'label' => 'Compra de ativo imobilizado'),
+               array('value' => 'Compra de material para uso e consumo', 'label' => 'Compra de material para uso e consumo'),
+               array('value' => 'Venda de material para uso e consumo', 'label' => 'Venda de material para uso e consumo'),
+            ),
+        ));
+        
         $fieldset->addField('status', 'select', array(
             'name'      => 'status',
             'label'     => 'Status',

@@ -1452,6 +1452,9 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
             if($nfeModel->getStatus() != '') {
                 $nfeCollection->addFieldToFilter('main_table.status', array('eq' => $nfeModel->getStatus()));
             }
+            if($nfeModel->getNatOp() != '') {
+                $nfeCollection->addFieldToFilter('main_table.nat_op', array('eq' => $nfeModel->getNatOp()));
+            }
             if($data['dh_recbto_desde']) {
                 $format = Mage::app()->getLocale()->getDateTimeFormat(Mage_Core_Model_Locale::FORMAT_TYPE_SHORT);
                 $dhRecbtoDesde = Mage::app()->getLocale()->date($data['dh_recbto_desde'], $format);
