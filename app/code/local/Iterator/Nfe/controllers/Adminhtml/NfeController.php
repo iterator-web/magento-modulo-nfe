@@ -286,11 +286,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                 $nfeIdentificacaoEmitente->save();
                 
                 $estadoDestinatario = Mage::getModel('directory/region')->load($postData['destinatario']['region_id']);
-                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_nome'], 2, 60)) {
+                if(!$validarCampos->validaMinimoMaximo(utf8_encode($postData['destinatario']['x_nome'], 2, 60))) {
                     $erro = true;
                     $msgErro = utf8_encode('O nome ou razão social do destinatário da NF-e não é válido.');
                 }
-                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_lgr'], 2, 60)) {
+                if(!$validarCampos->validaMinimoMaximo(utf8_encode($postData['destinatario']['x_lgr'], 2, 60))) {
                     $erro = true;
                     $msgErro = utf8_encode('O logradouro do endereço do destinatário da NF-e não é válido.');
                 }
@@ -298,11 +298,11 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $erro = true;
                     $msgErro = utf8_encode('O número do endereço do destinatário da NF-e não é válido.');
                 }
-                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_cpl'], 0, 60)) {
+                if(!$validarCampos->validaMinimoMaximo(utf8_encode($postData['destinatario']['x_cpl'], 0, 60))) {
                     $erro = true;
                     $msgErro = utf8_encode('O complemento do endereço do destinatário da NF-e não é válido.');
                 }
-                if(!$validarCampos->validaMinimoMaximo($postData['destinatario']['x_bairro'], 2, 60)) {
+                if(!$validarCampos->validaMinimoMaximo(utf8_encode($postData['destinatario']['x_bairro'], 2, 60))) {
                     $erro = true;
                     $msgErro = utf8_encode('O bairro do endereço do destinatário da NF-e não é válido.');
                 }
