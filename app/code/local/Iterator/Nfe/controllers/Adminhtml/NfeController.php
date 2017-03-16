@@ -554,7 +554,9 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                             $cobranca = Mage::getModel('nfe/nfecobranca');
                             $cobranca->setNfeId($nfeId);
                             $cobranca->setCob_n_dup($cobrancasArray['option_'.$i]['cob_n_dup']);
-                            $cobranca->setCob_d_venc($cobrancasArray['option_'.$i]['cob_d_venc']);
+                            $cobDataVencimento = $cobrancasArray['option_'.$i]['cob_d_venc'];
+                            $arrDataVenc = explode('/', $cobDataVencimento);
+                            $cobranca->setCob_d_venc($arrDataVenc[2].'-'.$arrDataVenc[1].'-'.$arrDataVenc[0]);
                             $cobranca->setCob_v_dup($cobrancasArray['option_'.$i]['cob_v_dup']);
                             $cobranca->save();
                         }

@@ -1655,7 +1655,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 ->addFieldToFilter('nfe_id', $nfeId);
         foreach($cobrancaCollection as $cobrancaModel) {
             $nDupCob = $cobrancaModel->getCob_n_dup();
-            $dVencCob = substr($cobrancaModel->getCob_d_venc(), 0, 4).substr($cobrancaModel->getCob_d_venc(), 7, 3).substr($cobrancaModel->getCob_d_venc(), 4, 3);
+            $dVencCob = substr($cobrancaModel->getCob_d_venc(), 0, 4).substr($cobrancaModel->getCob_d_venc(), 4, 3).substr($cobrancaModel->getCob_d_venc(), 7, 3);
             $vDupCob = $cobrancaModel->getCob_v_dup();
             $resposta = $nfeCriarXML->tagdup($nDupCob, $dVencCob, $vDupCob);
         }
