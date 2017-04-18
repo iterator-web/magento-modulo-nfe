@@ -542,7 +542,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $model->save();
                 }
                 
-                if($postData['nfe']['cob_n_fat']) {
+                if($postData['nfe']['cob_duplicata']) {
                     $cobrancaCollection = Mage::getModel('nfe/nfecobranca')->getCollection()->addFieldToFilter('nfe_id', $nfeId);
                     foreach($cobrancaCollection as $cobrancaModel) {
                         $cobrancaModel->delete();
@@ -550,7 +550,7 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     $cobrancasArray = $postData['nfe']['cob_duplicata']['value'];
                     $cobrancasArrayDelete = $postData['nfe']['cob_duplicata']['delete'];
                     for($i=0; $i<count($cobrancasArray); $i++) {
-                        if($cobrancasArray['option_'.$i] && $cobrancasArrayDelete['option_'.$i] != '1') {
+                        if($cobrancasArray['option_'.$i]['cob_n_dup'] && $cobrancasArrayDelete['option_'.$i] != '1') {
                             $cobranca = Mage::getModel('nfe/nfecobranca');
                             $cobranca->setNfeId($nfeId);
                             $cobranca->setCob_n_dup($cobrancasArray['option_'.$i]['cob_n_dup']);
