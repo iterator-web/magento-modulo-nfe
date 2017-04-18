@@ -587,6 +587,41 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfe->setVNf($totalVNf);
         $nfe->setVTotTrib($totalVTotTrib);
         
+        $historyCollection = $order->getStatusHistoryCollection();
+        $parcelaTexto = '0';
+        foreach($historyCollection as $history) {
+            if(strpos($history->getComment(), 'p:') !== false ) {
+                $parcelaTexto = $history->getComment();
+            }
+        }
+        $parcelaArray = explode(':', $parcelaTexto);
+        $parcelaQtd = $parcelaArray[1];
+        if($parcelaTexto != '0') {
+            if($parcelaQtd == '1') {
+                $nfeCobranca = Mage::getModel('nfe/nfecobranca');
+                $nfeCobranca->setNfeId($nfeId);
+                $nfeCobranca->setCob_n_dup($nNF);
+                $nfeCobranca->setCob_d_venc(date("Y-m-d"));
+                $nfeCobranca->setCob_v_dup($totalVNf);
+                $nfeCobranca->save();
+            } else {
+                $parcelaValor = $totalVNf / (int)$parcelaQtd;
+                for($i=1; $i<=(int)$parcelaQtd; $i++) {
+                    $nfeCobranca = Mage::getModel('nfe/nfecobranca');
+                    $nfeCobranca->setNfeId($nfeId);
+                    $nfeCobranca->setCob_n_dup($nNF.'-'.$i);
+                    if($i == 1) {
+                        $nfeCobranca->setCob_d_venc(date("Y-m-d"));
+                    } else if($i > 1) {
+                        $proximoVencimento = $i-1;
+                        $nfeCobranca->setCob_d_venc(date("Y-m-d", strtotime('+'.$proximoVencimento.' month')));
+                    }
+                    $nfeCobranca->setCob_v_dup($parcelaValor);
+                    $nfeCobranca->save();
+                }
+            }
+        }
+        
         $nfe->setTransModFrete(0);
         if(strpos($order->getShippingDescription(), 'Correios') !== false) {
             $nfe->setTransTipoPessoa(2);
