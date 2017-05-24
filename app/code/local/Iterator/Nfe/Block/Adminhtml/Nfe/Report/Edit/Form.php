@@ -129,6 +129,9 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Report_Edit_Form extends Mage_Adminhtml_B
                array('value' => 'Compra de material para uso e consumo', 'label' => 'Compra de material para uso e consumo'),
                array('value' => 'Venda de material para uso e consumo', 'label' => 'Venda de material para uso e consumo'),
                array('value' => 'Venda de imobilizado', 'label' => 'Venda de imobilizado'),
+               array('value' => 'Complemento', 'label' => 'Complemento'),
+               array('value' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.', 'label' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.'),
+               array('value' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem'), 'label' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem')),
             ),
         ));
         
