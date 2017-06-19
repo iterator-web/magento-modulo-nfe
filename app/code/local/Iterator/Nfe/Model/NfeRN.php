@@ -666,6 +666,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         
         $nfe->save();
         
+        $order->setNfeNumero($nfe->getNNf());
+        $order->setNfeEmissao($nfe->getDhEmi());
+        $order->save();
+        
         $this->setStatusPedido($order);
         
         $retorno['status'] = 'sucesso';
