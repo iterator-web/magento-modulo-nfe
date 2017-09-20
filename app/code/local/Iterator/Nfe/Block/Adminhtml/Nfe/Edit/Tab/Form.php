@@ -49,17 +49,27 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Form extends Mage_Adminhtml_Bloc
             $fieldset->addField('nfe_id', 'hidden', array(
                 'name' => 'nfe_id',
             ));
+            $fieldset->addField('pedido_increment_id', 'text', array(
+                'name'      => 'pedido_increment_id',
+                'label'     => utf8_encode('Número do Pedido'),
+                'title'     => utf8_encode('Número do Pedido'),
+                'required'  => false,
+                'readonly'  => true,
+                'style'     => "background:none;color:#777;",
+                'class'     => 'validate-zero-or-greater',
+            ));
+        } else if(!$model->getId()) {
+            $fieldset->addField('pedido_increment_id', 'text', array(
+                'name'      => 'pedido_increment_id',
+                'label'     => utf8_encode('Número do Pedido'),
+                'title'     => utf8_encode('Número do Pedido'),
+                'required'  => false,
+                'style'     => "background:#fff",
+                'class'     => 'validate-zero-or-greater',
+            ));
         }
         
-        $fieldset->addField('pedido_increment_id', 'text', array(
-            'name'      => 'pedido_increment_id',
-            'label'     => utf8_encode('Número do Pedido'),
-            'title'     => utf8_encode('Número do Pedido'),
-            'required'  => false,
-            'disabled'  => ($model->getId() ? true : false),
-            'style'     => ($model->getId() ? "background:none" : "background:#fff"),
-            'class'     => 'validate-zero-or-greater',
-        ));
+        
         
         $fieldset->addField('tp_nf', 'select', array(
             'name'      => 'tp_nf',
