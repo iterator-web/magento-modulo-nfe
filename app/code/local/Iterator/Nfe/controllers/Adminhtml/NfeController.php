@@ -1080,7 +1080,9 @@ class Iterator_Nfe_Adminhtml_NfeController extends Mage_Adminhtml_Controller_Act
                     Mage::getSingleton('adminhtml/session')->addSuccess($this->__(utf8_encode('CC-e da NF-e foi salva com sucesso.')));
                     $nfeHelper->salvarXmlCorrigido($xmlCorrigido['xml'], $nfe);
                     $nfeHelper->gerarDacce($xmlCorrigido['xml'], $nfe, 'F');
-                    $nfeHelper->setCorrigido($nfe);
+                    if($nfe->getPedidoIncrementId()) {
+                        $nfeHelper->setCorrigido($nfe);
+                    }
                 } else {
                     Mage::getSingleton('adminhtml/session')->addError($this->__('Um erro ocorreu enquanto esta NF-e era corrigida.'));
                     $nfe->setMensagem(utf8_encode('Houve erro na correção da NF-e. Erro: '.utf8_decode($xmlCorrigido['retorno'])));
