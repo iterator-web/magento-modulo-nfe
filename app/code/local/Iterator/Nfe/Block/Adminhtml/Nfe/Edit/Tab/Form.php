@@ -110,6 +110,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Form extends Mage_Adminhtml_Bloc
                array('value' => 'Complemento', 'label' => 'Complemento'),
                array('value' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.', 'label' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.'),
                array('value' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem'), 'label' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem')),
+               array('value' => utf8_encode('Remessa em Consignação'), 'label' => utf8_encode('Remessa em Consignação')),
             ),
             'required'  => true,
         ));
