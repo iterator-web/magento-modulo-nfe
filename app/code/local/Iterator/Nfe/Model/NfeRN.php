@@ -590,7 +590,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $historyCollection = $order->getStatusHistoryCollection();
         $parcelaTexto = '0';
         foreach($historyCollection as $history) {
-            if(strpos($history->getComment(), 'p:') !== false ) {
+            if(strpos($history->getComment(), 'parcelas:') !== false ) {
                 $parcelaTexto = $history->getComment();
             }
         }
