@@ -35,8 +35,8 @@
 class Iterator_Nfe_Helper_Data extends Mage_Core_Helper_Abstract {
 
     public function checkValidationNfe() {
-        $domain = 'www.magentoperfumesjf.com.br';
-        $ip = '192.168.106.128';
+        $domain = '127.0.0.1';
+        $ip = '127.0.0.1';
         return md5($domain.'i_|*12*|_T'.$ip);
     }
 }
