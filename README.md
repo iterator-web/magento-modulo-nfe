@@ -17,3 +17,7 @@ Este projeto foi desenvolvido originalmente em um reposítório privado e agora 
 
 ## Necessita Atualização
 O projeto em repositório privado foi descontinuado, por este motivo optou-se por torna-lo público, pois como ele foi desenvolvido para a versão 3.10 da NF-e, necessita ser atualizado para a versão 4.0 e no momento não será feito por não haver disponibilidade de tempo para dedicar à este desenvolvimento específico. Portanto necessita de colaboradores para que realizem as tarefas necessárias para adequação do projeto a versão 4.0 e todos são bem vindos.
+
+## Contato
+Site: http://www.iterator.com.br
+E-Mail: contato@iterator.com.br
