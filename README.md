@@ -13,7 +13,7 @@ finalidade de automatização de impostos e que também está publico e pode ser
 A parte de comunicação com o Webservice do SEFAZ, algumas regras, bem como a validação e gerenciamento de certificado digital, foram desenvolvidas com base no projeto NFePHP: https://github.com/nfephp-org/nfephp
 
 ## Repositório Público
-Este projeto foi desenvolvido originalmente em um reposítório privado e agora após mais de 3 anos de uso em produção, tornou-se público.
+Este projeto foi desenvolvido originalmente em um reposítório privado e agora após mais de 3 anos de uso em produção, tornou-se público em 08/06/2018.
 
 ## Necessita Atualização
 O projeto em repositório privado foi descontinuado, por este motivo optou-se por torna-lo público, pois como ele foi desenvolvido para a versão 3.10 da NF-e, necessita ser atualizado para a versão 4.0 e no momento não será feito por não haver disponibilidade de tempo para dedicar à este desenvolvimento específico. Portanto necessita de colaboradores para que realizem as tarefas necessárias para adequação do projeto a versão 4.0 e todos são bem vindos.
