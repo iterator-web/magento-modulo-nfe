@@ -317,7 +317,9 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeIdentificacaoDestinatario->setCPais('1058');
         $nfeIdentificacaoDestinatario->setXPais('Brasil');
         $nfeIdentificacaoDestinatario->setFone(preg_replace('/[^\d]/', '', $order->getShippingAddress()->getTelephone()));
-        if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {
+        if(strpos($order->getCustomerEmail(),'extra.com.br') !== false || strpos($order->getCustomerEmail(),'walmart.com.br') !== false || strpos($order->getCustomerEmail(),'email.com.br') !== false) {
+            $nfeIdentificacaoDestinatario->setEmail('');
+        } else {
             $nfeIdentificacaoDestinatario->setEmail($order->getCustomerEmail());
         }
         $nfeIdentificacaoDestinatario->save();
@@ -388,8 +390,10 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                             } else {
                                 $cfop = '6102';
                             }
-                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento') && $nfeIdentificacaoDestinatario->getIndIeDest() != '9') {
                             $cfop = '6101';
+                        } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento') && $nfeIdentificacaoDestinatario->getIndIeDest() == '9') {
+                            $cfop = '6107';
                         }
                     } else if($estadoEmitente->getRegionId() != $estadoDestinatario->getRegionId() && strlen($cpfCnpj) <= 11) {
                         if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
@@ -583,6 +587,41 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfe->setVNf($totalVNf);
         $nfe->setVTotTrib($totalVTotTrib);
         
+        $historyCollection = $order->getStatusHistoryCollection();
+        $parcelaTexto = '0';
+        foreach($historyCollection as $history) {
+            if(strpos($history->getComment(), 'parcelas:') !== false ) {
+                $parcelaTexto = $history->getComment();
+            }
+        }
+        $parcelaArray = explode(':', $parcelaTexto);
+        $parcelaQtd = $parcelaArray[1];
+        if($parcelaTexto != '0') {
+            if($parcelaQtd == '1') {
+                $nfeCobranca = Mage::getModel('nfe/nfecobranca');
+                $nfeCobranca->setNfeId($nfeId);
+                $nfeCobranca->setCob_n_dup($nNF);
+                $nfeCobranca->setCob_d_venc(date("Y-m-d"));
+                $nfeCobranca->setCob_v_dup($totalVNf);
+                $nfeCobranca->save();
+            } else {
+                $parcelaValor = $totalVNf / (int)$parcelaQtd;
+                for($i=1; $i<=(int)$parcelaQtd; $i++) {
+                    $nfeCobranca = Mage::getModel('nfe/nfecobranca');
+                    $nfeCobranca->setNfeId($nfeId);
+                    $nfeCobranca->setCob_n_dup($nNF.'-'.$i);
+                    if($i == 1) {
+                        $nfeCobranca->setCob_d_venc(date("Y-m-d"));
+                    } else if($i > 1) {
+                        $proximoVencimento = $i-1;
+                        $nfeCobranca->setCob_d_venc(date("Y-m-d", strtotime('+'.$proximoVencimento.' month')));
+                    }
+                    $nfeCobranca->setCob_v_dup($parcelaValor);
+                    $nfeCobranca->save();
+                }
+            }
+        }
+        
         $nfe->setTransModFrete(0);
         if(strpos($order->getShippingDescription(), 'Correios') !== false) {
             $nfe->setTransTipoPessoa(2);
@@ -619,12 +658,17 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             }
             if($vICMSUFDest > 0) {
                 $infCpl .= utf8_encode('TOTAL DO ICMS INTERESTADUAL PARA A UF DO DESTINATÁRIO '.Mage::helper('core')->currency($vICMSUFDest, true, false).'.  ');
+                $infCpl .= utf8_encode('Recolhimento DIFAL suspenso pela ADI 5464 - 02/2016.  ');
             }
         }
         $infCpl .= utf8_encode('Val Aprox dos Tributos '.Mage::helper('core')->currency($totalVTotTrib, true, false).' Fonte: IBPT');
         $nfe->setInfInfCpl($infCpl);
         
         $nfe->save();
+        
+        $order->setNfeNumero($nfe->getNNf());
+        $order->setNfeEmissao($nfe->getDhEmi());
+        $order->save();
         
         $this->setStatusPedido($order);
         
@@ -777,14 +821,31 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
         $nfeReferenciado->save();
         
         $nfeProdutos = Mage::getModel('nfe/nfeproduto')->getCollection()->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId));
+        $nfeIdentificacaoDestinatario = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+                    ->addFieldToFilter('nfe_id', array('eq' => $nfeSaidaId))
+                    ->addFieldToFilter('tipo_identificacao', array('eq' => 'dest'))
+                    ->getFirstItem();
+        $motorCalculos = Mage::getModel('motorimpostos/motorcalculos');
         foreach($nfeProdutos as $nfeProduto) {
             $nfeProdutoSaidaId = $nfeProduto->getProdutoId();
+            $prdutoMagentoId = preg_replace('/[^\d]/', '', $nfeProduto->getProduto());
+            $ncm = Mage::getModel('catalog/product')->load($prdutoMagentoId)->getAttributeText('ncm');
+            $origem = substr(Mage::getModel('catalog/product')->load($prdutoMagentoId)->getAttributeText('origem'),0,1);
             $nfeProduto->setProdutoId(null);
             $nfeProduto->setNfeId($nfeEntradaId);
+            $tipoMercadoria = Mage::getModel('catalog/product')->load($nfeProdutoSaidaId)->getAttributeText('tipo_mercadoria');
             if($estadoEmitente->getRegionId() == $estadoDestinatario->getRegionId()) {
-                $cfop = '1202';
+                if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                    $cfop = '1202';
+                } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                    $cfop = '1201';
+                }
             } else {
-                $cfop = '2202';
+                if($tipoMercadoria == utf8_encode('Adquirida ou Recebida de Terceiros')) {
+                    $cfop = '2202';
+                } else if($tipoMercadoria == utf8_encode('Produção do Estabelecimento')) {
+                    $cfop = '2201';
+                }
             }
             $nfeProduto->setCfop($cfop);
             $nfeProduto->save();
@@ -801,9 +862,14 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
             
             $nfeProdutoImpostos = Mage::getModel('nfe/nfeprodutoimposto')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
             foreach($nfeProdutoImpostos as $nfeProdutoImposto) {
-                $nfeProdutoImposto->setImpostoId(null);
-                $nfeProdutoImposto->setProdutoId($nfeProdutoEntradaId);
-                $nfeProdutoImposto->save();
+                $dadosNcm = $motorCalculos->getDadosNcm($cfop, $ncm, $origem, $nfeIdentificacaoDestinatario->getIndIeDest());
+                if($dadosNcm) {
+                    $motorCalculos->setImpostosProdutoNfe($nfeProduto, $dadosNcm, $estadoEmitente->getRegionId(), $estadoDestinatario->getRegionId(), $nfeProduto->getTemIcmsDestino());
+                } else {
+                    $nfeProdutoImposto->setImpostoId(null);
+                    $nfeProdutoImposto->setProdutoId($nfeProdutoEntradaId);
+                    $nfeProdutoImposto->save();
+                }
             }
             
             $nfeProdutoImportExports = Mage::getModel('nfe/nfeprodutoimportexport')->getCollection()->addFieldToFilter('produto_id', array('eq' => $nfeProdutoSaidaId));
@@ -1632,7 +1698,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 ->addFieldToFilter('nfe_id', $nfeId);
         foreach($cobrancaCollection as $cobrancaModel) {
             $nDupCob = $cobrancaModel->getCob_n_dup();
-            $dVencCob = substr($cobrancaModel->getCob_d_venc(), 0, 4).substr($cobrancaModel->getCob_d_venc(), 7, 3).substr($cobrancaModel->getCob_d_venc(), 4, 3);
+            $dVencCob = substr($cobrancaModel->getCob_d_venc(), 0, 4).substr($cobrancaModel->getCob_d_venc(), 4, 3).substr($cobrancaModel->getCob_d_venc(), 7, 3);
             $vDupCob = $cobrancaModel->getCob_v_dup();
             $resposta = $nfeCriarXML->tagdup($nDupCob, $dVencCob, $vDupCob);
         }
@@ -1712,7 +1778,7 @@ class Iterator_Nfe_Model_NfeRN extends Mage_Core_Model_Abstract {
                 $indPag = '0';
             }
         } else {
-            $indPag = '0';
+            $indPag = '2';
         }
         
         return $indPag;

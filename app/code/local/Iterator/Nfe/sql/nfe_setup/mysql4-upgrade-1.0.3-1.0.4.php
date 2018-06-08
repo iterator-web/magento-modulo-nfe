@@ -32,11 +32,19 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  */
 
-class Iterator_Nfe_Helper_Data extends Mage_Core_Helper_Abstract {
+$installer = $this;
+$installer->startSetup();
 
-    public function checkValidationNfe() {
-        $domain = '127.0.0.1';
-        $ip = '127.0.0.1';
-        return md5($domain.'i_|*12*|_T'.$ip);
-    }
+try {
+$installer->run("
+    ALTER TABLE {$installer->getTable('sales/order')} ADD COLUMN `nfe_numero` INT(9) UNSIGNED ZEROFILL NULL;
+    ALTER TABLE {$installer->getTable('sales/order')} ADD COLUMN `nfe_emissao` DATETIME NULL;
+");
+} catch (Exception $e) {
+    
 }
+
+$installer->endSetup();
+
+
+?>

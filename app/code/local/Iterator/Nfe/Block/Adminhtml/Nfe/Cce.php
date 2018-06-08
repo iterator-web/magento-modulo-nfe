@@ -8,6 +8,7 @@
  * Ao fazer uso deste arquivo em seu produto, automaticamente você está 
  * concordando com os termos do Contrato de Licença de Usuário Final(EULA)
  * propostos pela empresa Iterator Sistemas Web.
+ * Contrato: http://www.iterator.com.br/licenca.txt
  *
  * =================================================================
  *                     MÓDULO DE INTEGRAÇÃO NF-E                          
@@ -32,11 +33,25 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  */
 
-class Iterator_Nfe_Helper_Data extends Mage_Core_Helper_Abstract {
-
-    public function checkValidationNfe() {
-        $domain = '127.0.0.1';
-        $ip = '127.0.0.1';
-        return md5($domain.'i_|*12*|_T'.$ip);
+class Iterator_Nfe_Block_Adminhtml_Nfe_Cce extends Mage_Adminhtml_Block_Widget_Form_Container
+{
+    
+    public function __construct() {
+     
+        parent::__construct();
+        
+        $this->_objectId = 'id';
+        $this->_blockGroup = 'nfe';
+        $this->_controller = 'adminhtml_nfe_cce';
+        
+        $this->_updateButton('save', 'label', utf8_encode('Salvar Correção'));
+    }  
+ 
+    public function getHeaderText() {
+        if( Mage::registry('nfe_cce') && Mage::registry('nfe_cce')->getId() ) {
+            return Mage::helper('nfe')->__("Editar CC-e '%s'", $this->htmlEscape(Mage::registry('nfe_cce')->getNSeqEvento()));
+        } else {
+            return Mage::helper('nfe')->__('Nova CC-e');
+        }
     }
 }

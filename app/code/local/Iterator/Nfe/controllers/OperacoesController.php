@@ -40,7 +40,11 @@ class Iterator_Nfe_OperacoesController extends Mage_Core_Controller_Front_Action
         $formato = $params['formato'];
         $tipo = $params['tipo'];
         $chaveDecrypt = base64_decode(str_pad(strtr($chave, '-_', '+/'), strlen($chave) % 4, '=', STR_PAD_RIGHT));
-        $filepath = Mage::getBaseDir(). DS . 'nfe' . DS . $formato . DS . $tipo . DS . 'NFe'.$chaveDecrypt . '.'.$formato;
+        $identificador = 'NFe';
+        if($tipo == 'corrigido') {
+            $identificador = 'CCe';
+        }
+        $filepath = Mage::getBaseDir(). DS . 'nfe' . DS . $formato . DS . $tipo . DS . $identificador.$chaveDecrypt . '.'.$formato;
         if(!is_file($filepath) || !is_readable($filepath)) {
             echo '<h1>SOLICITAÇÃO INVÁLIDA</h1>';
             exit();

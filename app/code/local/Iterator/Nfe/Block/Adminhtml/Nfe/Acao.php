@@ -38,6 +38,9 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_
     public function render(Varien_Object $row) {
         $nfeId =  $row->getData('nfe_id');
         $status =  $row->getData('status');
+        $emissao = new DateTime($row->getData('dh_emi'));
+        $dataAtual = new DateTime();
+        $diferenca = $emissao->diff($dataAtual);
         $order = Mage::getModel('sales/order')->loadByIncrementId($row->getData('pedido_increment_id'));
         if($status == '0' || $status == '4') {
             $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/edit/')."nfe_id/".$nfeId.'\');">Editar e Aprovar</a>';
@@ -50,8 +53,14 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Acao extends Mage_Adminhtml_Block_Widget_
             $acao = '<a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
         } else if($status == '7' && $order->getStatus() != 'complete') {
             $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/').'\');window.open(\''.Mage::helper('adminhtml')->getUrl('*/nfe/imprimir/')."nfe_id/".$nfeId.'\', \'_blank\');">Imprimir</a> | <a href="javascript:if(confirm(\'Confirma que deseja cancelar esta NF-e?\'))window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/cancel/')."nfe_id/".$nfeId.'\');">Cancelar</a>';
+            if($diferenca->days <= 30) {
+                $acao .=  ' | <a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/corrigir/')."nfe_id/".$nfeId.'\');">Corrigir</a>';
+            }
         } else if($status == '7' && $order->getStatus() == 'complete') {
             $acao = '<a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/').'\');window.open(\''.Mage::helper('adminhtml')->getUrl('*/nfe/imprimir/')."nfe_id/".$nfeId.'\', \'_blank\');">Imprimir</a>';
+            if($diferenca->days <= 30) {
+                $acao .=  ' | <a href="javascript:window.location.replace(\''.Mage::helper('adminhtml')->getUrl('*/nfe/corrigir/')."nfe_id/".$nfeId.'\');">Corrigir</a>';
+            }
         }
         return $acao;
     }

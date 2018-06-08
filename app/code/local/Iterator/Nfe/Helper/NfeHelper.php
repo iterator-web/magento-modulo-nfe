@@ -1303,7 +1303,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
             $xml = $xmldoc->saveXML();
             //libera a chave privada da memoria
             openssl_free_key($pkeyid);
-            if($operacao == 'inutilizar' || $operacao == 'cancelar') {
+            if($operacao == 'inutilizar' || $operacao == 'cancelar' || $operacao == 'corrigir') {
                 return $xml;
             }
             // Salva o XML
@@ -1815,6 +1815,309 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $xmlInutilizado['xml'] = $procXML;
         return $xmlInutilizado;
     } //fim inutNFe
+    
+    /**
+     * envCCe
+     * Envia carta de correção da Nota Fiscal para a SEFAZ.
+     * 
+     * ATENÇÃO! Serviço indisponível para SVC-XX.
+     *
+     * @name envCCe
+     * @param   string $chNFe Chave da NFe
+     * @param   string $xCorrecao Descrição da Correção entre 15 e 1000 caracteres
+     * @param   string $nSeqEvento numero sequencial da correção d 1 até 20
+     *                             isso deve ser mantido na base de dados e
+     *                             as correções consolidadas, isto é a cada nova correção
+     *                             devem ser inclusas as anteriores no texto.
+     *                             O Web Service não permite a duplicidade de numeração
+     *                             e nem controla a ordem crescente
+     * @param   integer $tpAmb Tipo de ambiente
+     * @param   array    $aResp Array com os dados do protocolo
+     * @return mixed false ou xml com a CCe
+     */
+    public function envCCe($chNFe = '', $xCorrecao = '', $nSeqEvento = '1', $tpAmb = '', &$aResp = array(), $siglaUf, $ufEmitente, $cnpjEmitente)
+    {
+        $xmlCorrigido = array();
+        $aResp = array(
+            'cStat' => false,
+            'versao' => null,
+            'idLote' => null,
+            'tpAmb' => null,
+            'verAplic' => null,
+            'cOrgao' => null,
+            'cStat' => null,
+            'xMotivo' => null,
+            'retEvento' => array(
+                'versao' => null,
+                'xMotivo' => null,
+                'infEvento' => array(
+                    'id' => null,
+                    'tpAmb' => null,
+                    'verAplic' => null,
+                    'cOrgao' => null,
+                    'cStat' => null,
+                    'xMotivo' => null,
+                    'chNFe' => null,
+                    'tpEvento' => null,
+                    'xEvento' => null,
+                    'nSeqEvento' => null,
+                    'CNPJDest' => null,
+                    'CPFDest' => null,
+                    'emailDest' => null,
+                    'dhRegEvento' => null,
+                    'nProt' => null)));
+
+        try {
+            //testa se os dados da carta de correção foram passados
+            if ($chNFe == '' || $xCorrecao == '') {
+                $msg = "Dados para a carta de correção não podem ser vazios.";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            if (strlen($chNFe) != 44) {
+                $msg = "Uma chave de NFe válida não foi passada como parâmetro $chNFe.";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            //se o numero sequencial do evento não foi informado ou se for invalido
+            if ($nSeqEvento == '' || strlen($nSeqEvento) > 2 || !is_numeric($nSeqEvento) || $nSeqEvento < 1) {
+                $msg = "Número sequencial da correção não encontrado ou é maior "
+                        . "que 99 ou contêm caracteres não numéricos [$nSeqEvento]";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            if (strlen($xCorrecao) < 15 || strlen($xCorrecao) > 1000) {
+                $msg = "O texto da correção deve ter entre 15 e 1000 caracteres!";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            //limpa o texto de correção para evitar surpresas
+            $xCorrecao = $this->pCleanString($xCorrecao);
+            /*
+            //ajusta ambiente
+            if ($tpAmb == '') {
+                $tpAmb = $this->tpAmb;
+            }
+            $aURL = $this->aURL;
+            */
+            if (!$aURL = $this->pLoadSEFAZ($tpAmb, $siglaUf)) {
+                $msg = "Erro no carregamento das informacoes da SEFAZ";
+                $protocolo['retorno'] = $msg;
+                return $protocolo;
+            }
+            $numLote = $this->pGeraNumLote();
+            //Data e hora do evento no formato AAAA-MM-DDTHH:MM:SSTZD (UTC)
+            $validarCampos = Mage::helper('nfe/ValidarCampos');
+            $dataAtual = $validarCampos->getHoraCerta(date('Y-m-d H:i:s'));
+            $dhEvento = str_replace(' ', 'T', $dataAtual).Mage::getStoreConfig('nfe/nfe_opcoes/horario');
+            //se o envio for para svan mudar o numero no orgão para 91
+            if ($this->enableSVAN) {
+                $cOrgao='90';
+            } else {
+                $cOrgao=$ufEmitente;
+            }
+            //montagem do namespace do serviço
+            $servico = 'RecepcaoEvento';
+            //recuperação da versão
+            $versao = $aURL[$servico]['version'];
+            //recuperação da url do serviço
+            $urlservico = $aURL[$servico]['URL'];
+            //recuperação do método
+            $metodo = $aURL[$servico]['method'];
+            //montagem do namespace do serviço
+            $namespace = $this->URLPortal.'/wsdl/'.$servico;
+            //estabelece o codigo do tipo de evento
+            $tpEvento = '110110';
+            //de acordo com o manual versão 5 de março de 2012
+            // 2   +    6     +    44         +   2  = 54 digitos
+            //“ID” + tpEvento + chave da NF-e + nSeqEvento
+            //garantir que existam 2 digitos em nSeqEvento para montar o ID com 54 digitos
+            if (strlen(trim($nSeqEvento))==1) {
+                $zenSeqEvento = str_pad($nSeqEvento, 2, "0", STR_PAD_LEFT);
+            } else {
+                $zenSeqEvento = trim($nSeqEvento);
+            }
+            $chaveId = "ID".$tpEvento.$chNFe.$zenSeqEvento;
+            $descEvento = 'Carta de Correcao';
+            $xCondUso = 'A Carta de Correcao e disciplinada pelo paragrafo 1o-A do '
+                    . 'art. 7o do Convenio S/N, de 15 de dezembro de 1970 e pode ser utilizada '
+                    . 'para regularizacao de erro ocorrido na emissao de documento fiscal, desde que o '
+                    . 'erro nao esteja relacionado com: I - as variaveis que determinam o valor do imposto '
+                    . 'tais como: base de calculo, aliquota, diferenca de preco, quantidade, valor da '
+                    . 'operacao ou da prestacao; II - a correcao de dados cadastrais que implique mudanca '
+                    . 'do remetente ou do destinatario; III - a data de emissao ou de saida.';
+            //monta mensagem
+            $Ev='';
+            $Ev .= "<evento xmlns=\"$this->URLPortal\" versao=\"$versao\">";
+            $Ev .= "<infEvento Id=\"$chaveId\">";
+            $Ev .= "<cOrgao>$cOrgao</cOrgao>";
+            $Ev .= "<tpAmb>$tpAmb</tpAmb>";
+            $Ev .= "<CNPJ>$cnpjEmitente</CNPJ>";
+            $Ev .= "<chNFe>$chNFe</chNFe>";
+            $Ev .= "<dhEvento>$dhEvento</dhEvento>";
+            $Ev .= "<tpEvento>$tpEvento</tpEvento>";
+            $Ev .= "<nSeqEvento>$nSeqEvento</nSeqEvento>";
+            $Ev .= "<verEvento>$versao</verEvento>";
+            $Ev .= "<detEvento versao=\"$versao\">";
+            $Ev .= "<descEvento>$descEvento</descEvento>";
+            $Ev .= "<xCorrecao>$xCorrecao</xCorrecao>";
+            $Ev .= "<xCondUso>$xCondUso</xCondUso>";
+            $Ev .= "</detEvento></infEvento></evento>";
+            //assinatura dos dados
+            $tagid = 'infEvento';
+            $Ev = $this->assinarXML($Ev, $tagid, '', 'corrigir');
+            $Ev = $this->pClearXml($Ev, true);
+            //carrega uma matriz temporária com os eventos assinados
+            //montagem dos dados
+            $dados = '';
+            $dados .= "<envEvento xmlns=\"$this->URLPortal\" versao=\"$versao\">";
+            $dados .= "<idLote>$numLote</idLote>";
+            $dados .= $Ev;
+            $dados .= "</envEvento>";
+            //montagem da mensagem
+            $cabec = "<nfeCabecMsg xmlns=\"$namespace\"><cUF>$ufEmitente</cUF>"
+                    . "<versaoDados>$versao</versaoDados></nfeCabecMsg>";
+            $dados = "<nfeDadosMsg xmlns=\"$namespace\">$dados</nfeDadosMsg>";
+            //grava solicitação em temp
+            /*
+            if (! file_put_contents($this->temDir."$chNFe-$nSeqEvento-envCCe.xml", $Ev)) {
+                $msg = "Falha na gravacao do arquivo envCCe!!";
+                throw new nfephpException($msg);
+            }
+             */
+            //envia dados via SOAP
+            $retorno = $this->pSendSOAP($urlservico, $namespace, $cabec, $dados, $metodo, $tpAmb);
+            //verifica o retorno
+            if (!$retorno) {
+                //não houve retorno
+                $msg = "Nao houve retorno Soap verifique a mensagem de erro e o debug!!";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            //tratar dados de retorno
+            $xmlretCCe = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+            $xmlretCCe->formatOutput = false;
+            $xmlretCCe->preserveWhiteSpace = false;
+            $xmlretCCe->loadXML($retorno['valor'], LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            $retEnvEvento = $xmlretCCe->getElementsByTagName('retEnvEvento')->item(0);
+            $retEvento = $xmlretCCe->getElementsByTagName("retEvento")->item(0);
+            $cStat = !empty($retEvento->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+            $xMotivo = !empty($retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+            if ($cStat == '') {
+                //houve erro
+                $msg = "cStat está em branco, houve erro na comunicação Soap "
+                        . "verifique a mensagem de erro e o debug!!";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            //erro no processamento cStat <> 128
+            if ($cStat != 135) {
+                //se cStat <> 135 houve erro e o lote foi rejeitado
+                $msg = "Retorno de ERRO: $cStat - $xMotivo";
+                $xmlCorrigido['retorno'] = $msg;
+                return $xmlCorrigido;
+            }
+            //a correção foi aceita cStat == 135
+            $aResp['cStat'] = true;
+            //carregar a CCe
+            $xmlenvCCe = new DOMDocument('1.0', 'utf-8'); //cria objeto DOM
+            $xmlenvCCe->formatOutput = false;
+            $xmlenvCCe->preserveWhiteSpace = false;
+            $xmlenvCCe->loadXML($Ev, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+            $evento = $xmlenvCCe->getElementsByTagName("evento")->item(0);
+            //Processo completo solicitação + protocolo
+            $xmlprocCCe = new DOMDocument('1.0', 'utf-8');
+            $xmlprocCCe->formatOutput = false;
+            $xmlprocCCe->preserveWhiteSpace = false;
+            //cria a tag procEventoNFe
+            $procEventoNFe = $xmlprocCCe->createElement('procEventoNFe');
+            $xmlprocCCe->appendChild($procEventoNFe);
+            //estabele o atributo de versão
+            $eventProc_att1 = $procEventoNFe->appendChild($xmlprocCCe->createAttribute('versao'));
+            $eventProc_att1->appendChild($xmlprocCCe->createTextNode($versao));
+            //estabelece o atributo xmlns
+            $eventProc_att2 = $procEventoNFe->appendChild($xmlprocCCe->createAttribute('xmlns'));
+            $eventProc_att2->appendChild($xmlprocCCe->createTextNode($this->URLPortal));
+            //carrega o node evento
+            $node1 = $xmlprocCCe->importNode($evento, true);
+            $procEventoNFe->appendChild($node1);
+            //carrega o node retEvento
+            $node2 = $xmlprocCCe->importNode($retEvento, true);
+            $procEventoNFe->appendChild($node2);
+            //salva o xml como string em uma variável
+            $procXML = $xmlprocCCe->saveXML();
+            //remove as informações indesejadas
+            $procXML = $this->pClearXml($procXML, false);
+            //estrutura "retEnvEvento"
+            $aRespVersao = $retEnvEvento->getAttribute('versao');
+            $aResp['versao'] = !empty($aRespVersao) ? $retEnvEvento->getAttribute('versao') : '';
+            $aResp['idLote'] = !empty($retEnvEvento->getElementsByTagName('idLote')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('idLote')->item(0)->nodeValue : '';
+            $aResp['tpAmb'] = !empty($retEnvEvento->getElementsByTagName('tpAmb')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('tpAmb')->item(0)->nodeValue : '';
+            $aResp['verAplic'] = !empty($retEnvEvento->getElementsByTagName('verAplic')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('verAplic')->item(0)->nodeValue : '';
+            $aResp['cOrgao'] = !empty($retEnvEvento->getElementsByTagName('cOrgao')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('cOrgao')->item(0)->nodeValue : '';
+            $aResp['cStat'] = !empty($retEnvEvento->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+            $aResp['xMotivo'] = !empty($retEnvEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                    $retEnvEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+            //estrutura "retEvento"/"infEvento"
+            $aRetEvento = array();
+            $aInfEvento = array();
+            $aRetEventoVersao = $retEvento->getAttribute('versao');
+            $aInfEventoId = $retEvento->getElementsByTagName('infEvento')->item(0)->getAttribute('id');
+            $aRetEvento['versao'] = !empty($aRetEventoVersao) ? $aRetEventoVersao : '';
+            $aInfEvento['id'] = !empty($aInfEventoId) ? $aInfEventoId : '';
+            $aInfEvento['tpAmb'] = !empty($retEvento->getElementsByTagName('tpAmb')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('tpAmb')->item(0)->nodeValue : '';
+            $aInfEvento['verAplic'] = !empty($retEvento->getElementsByTagName('verAplic')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('verAplic')->item(0)->nodeValue : '';
+            $aInfEvento['cOrgao'] = !empty($retEvento->getElementsByTagName('cOrgao')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('cOrgao')->item(0)->nodeValue : '';
+            $aInfEvento['cStat'] = !empty($retEvento->getElementsByTagName('cStat')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('cStat')->item(0)->nodeValue : '';
+            $aInfEvento['xMotivo'] = !empty($retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('xMotivo')->item(0)->nodeValue : '';
+            $aInfEvento['chNFe'] = !empty($retEvento->getElementsByTagName('chNFe')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('chNFe')->item(0)->nodeValue : '';
+            $aInfEvento['tpEvento'] = !empty($retEvento->getElementsByTagName('tpEvento')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('tpEvento')->item(0)->nodeValue : '';
+            $aInfEvento['nSeqEvento'] = !empty($retEvento->getElementsByTagName('nSeqEvento')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('nSeqEvento')->item(0)->nodeValue : '';
+            $aInfEvento['CNPJDest'] = !empty($retEvento->getElementsByTagName('CNPJDest')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('CNPJDest')->item(0)->nodeValue : '';
+            $aInfEvento['CPFDest'] = !empty($retEvento->getElementsByTagName('CPFDest')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('CPFDest')->item(0)->nodeValue : '';
+            $aInfEvento['emailDest'] = !empty($retEvento->getElementsByTagName('emailDest')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('emailDest')->item(0)->nodeValue : '';
+            $aInfEvento['dhRegEvento'] = !empty($retEvento->getElementsByTagName('dhRegEvento')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('dhRegEvento')->item(0)->nodeValue : '';
+            $aInfEvento['nProt'] = !empty($retEvento->getElementsByTagName('nProt')->item(0)->nodeValue) ?
+                    $retEvento->getElementsByTagName('nProt')->item(0)->nodeValue : '';
+            //adiciona os arrays na estrutura de retorno ficando
+            //retorno = array('retEvento'=>array('infEvento'=>array()))
+            $aRetEvento['infEvento'] = $aInfEvento;
+            $aResp['retEvento'] = $aRetEvento;
+            /*
+            //salva o arquivo xml
+            if (!file_put_contents($this->cccDir."$chNFe-$nSeqEvento-procCCe.xml", $procXML)) {
+                $msg = "Falha na gravacao da procCCe!!";
+                $this->pSetError($msg);
+                throw new nfephpException($msg);
+            }
+             */
+        } catch (Exception $e) {
+            $xmlCorrigido['retorno'] = $e;
+            return $xmlCorrigido;
+        }
+        $xmlCorrigido['retorno'] = 'sucesso';
+        $xmlCorrigido['xml'] = $procXML;
+        return $xmlCorrigido;
+    }//fim envCCe
     
     /**
      * cancelEvent
@@ -2441,32 +2744,66 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $agruparDanfe->concatPrint(); 
     }
     
+    public function gerarDacce($xmlNfe, $nfe, $acao) {
+        $nfeIdentificacaoEmitente = Mage::getModel('nfe/nfeidentificacao')->getCollection()
+            ->addFieldToFilter('nfe_id', array('eq' => $nfe->getNfeId()))
+            ->addFieldToFilter('tipo_identificacao', array('eq' => 'emit'))
+            ->getFirstItem();
+        $emailRemetente = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
+        $aEnd = array(
+            'razao' => $nfeIdentificacaoEmitente->getXNome(), 
+            'logradouro' => $nfeIdentificacaoEmitente->getXLgr(), 
+            'numero' => $nfeIdentificacaoEmitente->getNro(), 
+            'complemento' => $nfeIdentificacaoEmitente->getXCpl(), 
+            'bairro' => $nfeIdentificacaoEmitente->getXBairro(), 
+            'CEP' => $nfeIdentificacaoEmitente->getCep(), 
+            'municipio' => $nfeIdentificacaoEmitente->getXMun(), 
+            'UF' => $nfeIdentificacaoEmitente->getUf(), 
+            'telefone' => $nfeIdentificacaoEmitente->getFone(), 
+            'email' => $emailRemetente['email']
+        );
+        $formatoImpressao = Mage::getStoreConfig('nfe/danfe_opcoes/formato');
+        if($formatoImpressao == 'portraite') {
+            $formato = 'P';
+        } else {
+            $formato = 'L';
+        }
+        $logo = Mage::getBaseDir(). DS . 'nfe' . DS . 'imagens' . DS . 'logo.png';
+        $pdf = Mage::getBaseDir(). DS . 'nfe' . DS . 'pdf' . DS . 'corrigido' . DS . str_replace('NF', 'CC', $nfe->getIdTag()).'.pdf';
+        $nfeDacce = Mage::helper('nfe/pdf_nfeDacce');
+        $nfeDacce->init($xmlNfe, $formato, 'A4', $logo, 'I', $aEnd, '');
+        $nfeDacce->printDACCE($pdf, $acao);
+    }
+    
     public function enviarEmail($nfe) {
         $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
-        if(strpos($order->getCustomerEmail(),'extra.com.br') === false) {
-            $downloadsDetalhes = $this->getDownloads($nfe, false);
-            $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
-            Mage::getModel('core/email_template')
-                ->setDesignConfig(array(
-                    'area'  => 'frontend',
-                    'store' => Mage::app()->getStore()->getStoreId()
-                ))->sendTransactional(
-                    'nfe_email_template',
-                    $sender,
-                    $order->getCustomerEmail(),
-                    null,
-                    array(
-                        'store' => Mage::app()->getStore(),
-                        'order' => $order,
-                        'nfe_chve' => substr($nfe->getIdTag(),3),
-                        'xml_url' => $downloadsDetalhes['xml_url'],
-                        'pdf_url' => $downloadsDetalhes['pdf_url'],
-                        'xml_img' => $downloadsDetalhes['xml_img'],
-                        'pdf_img' => $downloadsDetalhes['pdf_img'],
-                        'nfe_name' => utf8_encode('Nota Fiscal Eletr�nica')
-                    )
-                );
+        $downloadsDetalhes = $this->getDownloads($nfe, '');
+        $sender = Mage::getStoreConfig('trans_email/ident_sales',Mage::app()->getStore()->getStoreId());
+        $mail = Mage::getModel('core/email_template');
+        $mail->setDesignConfig(array(
+            'area'  => 'frontend',
+            'store' => Mage::app()->getStore()->getStoreId()
+        ));
+        $emailBcc = Mage::getStoreConfig('nfe/emitente_opcoes/email_bcc');
+        if($emailBcc) {
+            $mail->addBCC($emailBcc);
         }
+        $mail->sendTransactional(
+            'nfe_email_template',
+            $sender,
+            $order->getCustomerEmail(),
+            null,
+            array(
+                'store' => Mage::app()->getStore(),
+                'order' => $order,
+                'nfe_chve' => substr($nfe->getIdTag(),3),
+                'xml_url' => $downloadsDetalhes['xml_url'],
+                'pdf_url' => $downloadsDetalhes['pdf_url'],
+                'xml_img' => $downloadsDetalhes['xml_img'],
+                'pdf_img' => $downloadsDetalhes['pdf_img'],
+                'nfe_name' => utf8_encode('Nota Fiscal Eletr�nica')
+            )
+        );
     }
     
     public function setCompleto($nfe) {
@@ -2480,7 +2817,7 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
          Chave: '.substr($nfe->getIdTag(),3).'<br/>
          Status: Completo');
         $order->save();
-        if(strpos($order->getCustomerEmail(),'extra.com.br') !== false) {
+        if(strpos($order->getCustomerEmail(),'email.com.br') !== false) {
             $order->addStatusToHistory(nfe_enviada, 
             'chave de acesso: '.substr($nfe->getIdTag(),3));
             $order->save();
@@ -2499,7 +2836,17 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
          Status: Inutilizado');
         $order->save();
         $nfe->setStatus('9');
-        $nfe->setMensagem(utf8_encode('A NF-e foi retirada e o n�mero inutilizado'));
+        $nfe->setMensagem(utf8_encode('A NF-e foi retirada e o n�mero inutilizado.'));
+        $nfe->save();
+    }
+    
+    public function setCorrigido($nfe) {
+        $order = Mage::getModel('sales/order')->loadByIncrementId($nfe->getPedidoIncrementId());
+        $order->addStatusToHistory($order->getStatus(),
+        'O processo de correção da Nota Fiscal Eletrônica (NF-e) foi completado e uma CC-e foi gerada.<br/>
+         Status: Completo');
+        $order->save();
+        $nfe->setMensagem(utf8_encode('A CC-e foi gerada para a NF-e com sucesso.'));
         $nfe->save();
     }
     
@@ -2542,10 +2889,12 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $nfe->save();
     }
     
-    public function getDownloads($nfe, $inutilizado) {
+    public function getDownloads($nfe, $documentoTipo) {
         $downloadsDetalhes = array();
-        if($inutilizado) {
+        if($documentoTipo == 'inutilizado') {
             $tipo = 'inutilizado';
+        } else if($documentoTipo == 'corrigido') {
+            $tipo = 'corrigido';
         } else if($nfe->getTpNf() == '0') {
             $tipo = 'entrada';
         } else {
@@ -2584,6 +2933,15 @@ class Iterator_Nfe_Helper_NfeHelper extends Mage_Core_Helper_Abstract {
         $doc->formatOutput = false;
         $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
         $doc->save($caminho.$nfe->getIdTag().'.xml');
+    }
+    
+    public function salvarXmlCorrigido($xmlNfe, $nfe) {
+        $caminho = Mage::getBaseDir(). DS . 'nfe' . DS . 'xml' . DS . 'corrigido' . DS;
+        $doc = new DOMDocument("1.0", "UTF-8");
+        $doc->preservWhiteSpace = false; //elimina espaços em branco
+        $doc->formatOutput = false;
+        $doc->loadXML($xmlNfe, LIBXML_NOBLANKS | LIBXML_NOEMPTYTAG);
+        $doc->save($caminho.str_replace('NF', 'CC', $nfe->getIdTag()).'.xml');
     }
     
     /**

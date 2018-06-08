@@ -32,11 +32,12 @@
  * @license    O Produto é protegido por leis de direitos autorais, bem como outras leis de propriedade intelectual.
  */
 
-class Iterator_Nfe_Helper_Data extends Mage_Core_Helper_Abstract {
-
-    public function checkValidationNfe() {
-        $domain = '127.0.0.1';
-        $ip = '127.0.0.1';
-        return md5($domain.'i_|*12*|_T'.$ip);
+class Iterator_Nfe_Model_NfeCce extends Mage_Core_Model_Abstract
+{
+    protected function _construct()
+    {
+        $this->_init('nfe/nfecce');
     }
 }
+
+?>

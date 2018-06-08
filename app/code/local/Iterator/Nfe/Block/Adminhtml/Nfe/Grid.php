@@ -82,7 +82,7 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
                 'align' =>'center',
                 'width' => '50px',
                 'index' => 'nfe_id',
-                'filter_index' => 'nfe_id'
+                'filter_index' => 'main_table.nfe_id'
             )
         );
          
@@ -213,8 +213,8 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Grid extends Mage_Adminhtml_Block_Widget_
             )
         );
         
-        $this->addExportType('*/*/exportCsv', Mage::helper('controleestoque')->__('CSV'));
-        $this->addExportType('*/*/exportXml', Mage::helper('controleestoque')->__('XML'));
+        $this->addExportType('*/*/exportCsv', Mage::helper('nfe')->__('CSV'));
+        $this->addExportType('*/*/exportXml', Mage::helper('nfe')->__('XML'));
          
         return parent::_prepareColumns();
     }

@@ -49,17 +49,27 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Form extends Mage_Adminhtml_Bloc
             $fieldset->addField('nfe_id', 'hidden', array(
                 'name' => 'nfe_id',
             ));
+            $fieldset->addField('pedido_increment_id', 'text', array(
+                'name'      => 'pedido_increment_id',
+                'label'     => utf8_encode('Número do Pedido'),
+                'title'     => utf8_encode('Número do Pedido'),
+                'required'  => false,
+                'readonly'  => true,
+                'style'     => "background:none;color:#777;",
+                'class'     => 'validate-zero-or-greater',
+            ));
+        } else if(!$model->getId()) {
+            $fieldset->addField('pedido_increment_id', 'text', array(
+                'name'      => 'pedido_increment_id',
+                'label'     => utf8_encode('Número do Pedido'),
+                'title'     => utf8_encode('Número do Pedido'),
+                'required'  => false,
+                'style'     => "background:#fff",
+                'class'     => 'validate-zero-or-greater',
+            ));
         }
         
-        $fieldset->addField('pedido_increment_id', 'text', array(
-            'name'      => 'pedido_increment_id',
-            'label'     => utf8_encode('Número do Pedido'),
-            'title'     => utf8_encode('Número do Pedido'),
-            'required'  => false,
-            'disabled'  => ($model->getId() ? true : false),
-            'style'     => ($model->getId() ? "background:none" : "background:#fff"),
-            'class'     => 'validate-zero-or-greater',
-        ));
+        
         
         $fieldset->addField('tp_nf', 'select', array(
             'name'      => 'tp_nf',
@@ -72,10 +82,36 @@ class Iterator_Nfe_Block_Adminhtml_Nfe_Edit_Tab_Form extends Mage_Adminhtml_Bloc
             'required'  => true,
         ));
         
-        $fieldset->addField('nat_op', 'text', array(
+        $fieldset->addField('nat_op', 'select', array(
             'name'      => 'nat_op',
             'label'     => utf8_encode('Natureza da Operação'),
             'title'     => utf8_encode('Natureza da Operação'),
+            'values'    => array(
+               array('value' => '', 'label' => utf8_encode('Selecione a Natureza da Operação...')),
+               array('value' => 'Venda de Mercadoria', 'label' => 'Venda de Mercadoria'),
+               array('value' => utf8_encode('Devolução de venda'), 'label' => utf8_encode('Devolução de venda')),
+               array('value' => 'Compra de Mercadoria', 'label' => 'Compra de Mercadoria'),
+               array('value' => utf8_encode('Devolução de Compra'), 'label' => utf8_encode('Devolução de Compra')),
+               array('value' => 'Simples Remessa', 'label' => 'Simples Remessa'),
+               array('value' => 'Simples faturamento decorrente de venda para entrega futura', 'label' => 'Simples faturamento decorrente de venda para entrega futura'),
+               array('value' => 'Venda originada de encomenda para entrega futura', 'label' => 'Venda originada de encomenda para entrega futura'),
+               array('value' => 'Simples remessa de mercadoria para troca/garantia', 'label' => 'Simples remessa de mercadoria para troca/garantia'),
+               array('value' => 'Retorno de simples remessa de mercadoria para troca/garantia', 'label' => 'Retorno de simples remessa de mercadoria para troca/garantia'),
+               array('value' => utf8_encode('Amostra Grátis'), 'label' => utf8_encode('Amostra Grátis')),
+               array('value' => 'Brindes', 'label' => 'Brindes'),
+               array('value' => utf8_encode('Bonificação'), 'label' => utf8_encode('Bonificação')),
+               array('value' => utf8_encode('Doação'), 'label' => utf8_encode('Doação')),
+               array('value' => 'Presente', 'label' => 'Presente'),
+               array('value' => utf8_encode('Outras Saídas'), 'label' => utf8_encode('Outras Saídas')),
+               array('value' => 'Compra de ativo imobilizado', 'label' => 'Compra de ativo imobilizado'),
+               array('value' => 'Compra de material para uso e consumo', 'label' => 'Compra de material para uso e consumo'),
+               array('value' => 'Venda de material para uso e consumo', 'label' => 'Venda de material para uso e consumo'),
+               array('value' => 'Venda de imobilizado', 'label' => 'Venda de imobilizado'),
+               array('value' => 'Complemento', 'label' => 'Complemento'),
+               array('value' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.', 'label' => 'Vd prod.estab. entr. destin. por conta e ordem adquir. orig.'),
+               array('value' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem'), 'label' => utf8_encode('Remessa de merc. por conta ordem terc., em venda à ordem')),
+               array('value' => utf8_encode('Remessa em Consignação'), 'label' => utf8_encode('Remessa em Consignação')),
+            ),
             'required'  => true,
         ));
         

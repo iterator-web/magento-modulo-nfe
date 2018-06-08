@@ -94,12 +94,14 @@ function respondToChange(event) {
     }
     if(elementId === 'fin_nfe') {
         exibirReferencia(document.getElementById(''+elementId+'').value);
+        habilitarDesabilitarDevolucao();
     }
     if(elementId === 'tipo_documento') {
         habilitarCamposReferencia(document.getElementById(''+elementId+'').value);
     }
     if(elementId === 'destinatario_tipo_pessoa') {
         habilitarCamposTipoPessoa('destinatario_', document.getElementById(''+elementId+'').value);
+        habilitarIcmsDestinoTipoPessoa(document.getElementById(''+elementId+'').value);
     }
     if(elementId === 'entrega_tipo_pessoa') {
         habilitarCamposTipoPessoa('entrega_', document.getElementById(''+elementId+'').value);
@@ -118,7 +120,7 @@ function respondToChange(event) {
     }
     if(elementId === 'tp_nf') {
         exibirImportExport(document.getElementById(''+elementId+'').value);
-        habilitarDesabilitarDevolucao(document.getElementById(''+elementId+'').value);
+        habilitarDesabilitarDevolucao();
     }
     if(elementId === 'tem_importacao') {
         if(document.getElementById(''+elementId+'').checked) {
@@ -159,7 +161,7 @@ function carregarNfe() {
     exibirRetirada(valorTemRetirada);
     exibirEntrega(valorTemEntrega);
     exibirImportExport(valorTpNf);
-    habilitarDesabilitarDevolucao(valorTpNf);
+    habilitarDesabilitarDevolucao();
     formatarValores(elementosMonetarios);
 }
 
@@ -533,7 +535,8 @@ function exibirExportacao(processo) {
 
 function habilitarIcmsDestinoOperacao(destinoOperacao) {
     indicador = document.getElementById('destinatario_ind_ie_dest').value;
-    if(destinoOperacao === '2' && indicador === '9') {
+    tipoPessoa = document.getElementById('destinatario_tipo_pessoa').value;
+    if(destinoOperacao === '2' && tipoPessoa === '2' && indicador === '9' || destinoOperacao === '2' && tipoPessoa === '1') {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
     } else {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
@@ -542,7 +545,16 @@ function habilitarIcmsDestinoOperacao(destinoOperacao) {
 
 function habilitarIcmsDestinoIndicador(indicador) {
     destinoOperacao = document.getElementById('id_dest').value;
+    tipoPessoa = document.getElementById('destinatario_tipo_pessoa').value;
     if(indicador === '9' && destinoOperacao === '2') {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
+    } else {
+        $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
+    }
+}
+
+function habilitarIcmsDestinoTipoPessoa(tipoPessoa) {
+    if(tipoPessoa === '1') {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'block'});
     } else {
         $$('a[href="#icms_destino"]').invoke("setStyle",{display:'none'});
@@ -557,13 +569,18 @@ function habilitarIcmsDestino(destinoOperacao) {
     }
 }
 
-function habilitarDesabilitarDevolucao(tpNf) {
-    if(tpNf === '1') {
+function habilitarDesabilitarDevolucao() {
+    var valorTpNf = document.getElementById('tp_nf').value;
+    var valorFinNfe = document.getElementById('fin_nfe').value;
+    if(valorTpNf === '1') {
         $$('[id^="p_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
         $$('[id^="v_ipi_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
-    } else if(tpNf === '0') {
+    } else if(valorTpNf === '0' && valorFinNfe === '4') {
         $$('[id^="p_devol"]').invoke("setStyle",{backgroundColor:"#FFF"}).invoke('enable');
         $$('[id^="v_ipi_devol"]').invoke("setStyle",{backgroundColor:"#FFF"}).invoke('enable');
+    } else if(valorTpNf === '0' && valorFinNfe !== '4') {
+        $$('[id^="p_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
+        $$('[id^="v_ipi_devol"]').invoke("setStyle",{background:"none"}).invoke('disable');
     }
 }
 

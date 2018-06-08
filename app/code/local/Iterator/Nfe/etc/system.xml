@@ -230,6 +230,15 @@
                             <show_in_website>1</show_in_website>
                             <show_in_store>1</show_in_store>
                         </fone>
+                        <email_bcc>
+                            <label>E-Mail Bcc</label>
+                            <comment><![CDATA[Preencher para receber uma c&oacute;pia dos e-mails enviados aos compradores.]]></comment>
+                            <frontend_type>text</frontend_type>
+                            <sort_order>14</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </email_bcc>
                     </fields>
                 </emitente_opcoes>
             </groups>
